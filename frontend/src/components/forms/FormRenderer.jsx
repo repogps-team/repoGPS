@@ -16,7 +16,7 @@ const parseSchema = (schema) => {
   return null
 }
 
-const FormRenderer = ({ formDefinition, expedienteId, onSubmitComplete, readOnly = false }) => {
+const FormRenderer = ({ formDefinition, expedienteId, onSubmitComplete, readOnly = false, submissionData = null }) => {
   const { post } = useApi()
   const containerRef = useRef(null)
   const formioRef = useRef(null)
@@ -70,8 +70,10 @@ const FormRenderer = ({ formDefinition, expedienteId, onSubmitComplete, readOnly
           }
         })
 
-        // Set initial empty submission
-        formioRef.current.submission = { data: {} }
+        // Set submission data (empty for new form, or existing data for viewing)
+        formioRef.current.submission = {
+          data: submissionData || {}
+        }
         setInitialized(true)
 
         formioRef.current.on('submit', async (submission) => {
@@ -112,12 +114,12 @@ const FormRenderer = ({ formDefinition, expedienteId, onSubmitComplete, readOnly
         formioRef.current = null
       }
     }
-  }, [formDefinition, expedienteId, readOnly, onSubmitComplete, post])
+  }, [formDefinition, expedienteId, readOnly, onSubmitComplete, post, submissionData])
 
-  // Reset initialized state when formDefinition changes
+  // Reset initialized state when formDefinition or submissionData changes
   useEffect(() => {
     setInitialized(false)
-  }, [formDefinition?.id])
+  }, [formDefinition?.id, submissionData])
 
   if (!formDefinition?.schema) {
     return <div className="loading">Cargando formulario...</div>

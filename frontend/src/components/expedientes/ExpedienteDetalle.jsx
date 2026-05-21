@@ -352,6 +352,7 @@ const ExpedienteDetalle = ({
                                           <div className="formio-renderer-wrapper">
                                             <FormRenderer
                                               formDefinition={{ id: f.id, schema: expandedFormDetail.schema }}
+                                              submissionData={r.data}
                                               readOnly={true}
                                             />
                                           </div>
