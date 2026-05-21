@@ -1,14 +1,23 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useApi } from '../../hooks/useApi'
-import { FormBuilder } from '@formio/react'
+import { FormBuilder, Formio } from '@formio/js'
 
-// Safe wrapper to ensure schema is always valid
+// Safe schema validator with complete structure
 const sanitizeSchema = (schema) => {
-  if (!schema) return { display: 'form', components: [] }
+  if (!schema || typeof schema !== 'object') {
+    return {
+      display: 'form',
+      components: [],
+      title: 'Nuevo Formulario',
+      name: 'newForm'
+    }
+  }
   return {
     display: schema.display || 'form',
-    components: Array.isArray(schema.components) ? schema.components : []
+    components: Array.isArray(schema.components) ? schema.components : [],
+    title: schema.title || 'Formulario',
+    name: schema.name || 'form'
   }
 }
 
@@ -25,6 +34,10 @@ const FormBuilderPage = () => {
   const [cargando, setCargando] = useState(false)
   const [builderError, setBuilderError] = useState(null)
 
+  const containerRef = useRef(null)
+  const builderRef = useRef(null)
+
+  // Load existing form if editing
   useEffect(() => {
     if (id) {
       const cargarFormulario = async () => {
@@ -47,15 +60,72 @@ const FormBuilderPage = () => {
     }
   }, [id, get])
 
-  const handleSchemaChange = (newSchema) => {
-    try {
-      setBuilderError(null)
-      setFormSchema(sanitizeSchema(newSchema))
-    } catch (err) {
-      console.error('Error processing schema change:', err)
-      setBuilderError('Error al actualizar el diseño del formulario')
+  // Initialize FormIO Builder imperatively
+  useEffect(() => {
+    if (!containerRef.current) return
+
+    let mounted = true
+
+    // Suppress FormIO warnings
+    Formio.setBaseUrl('')
+    Formio.setProjectUrl('')
+
+    const initBuilder = () => {
+      try {
+        // Destroy existing builder if any
+        if (builderRef.current) {
+          builderRef.current.instance.destroy()
+          builderRef.current = null
+        }
+
+        // Ensure schema is valid
+        const currentSchema = sanitizeSchema(formSchema)
+        console.log('[FormBuilder] Initializing with schema:', JSON.stringify(currentSchema, null, 2))
+
+        // Create new builder
+        const builderInstance = new FormBuilder(containerRef.current, currentSchema, {
+          noeval: true,
+          hooks: {
+            beforeSubmit: (submission, next) => next(null, submission)
+          }
+        })
+
+        if (!mounted) return
+        builderRef.current = builderInstance
+
+        // Listen for changes
+        builderInstance.instance.on('change', () => {
+          if (!mounted) return
+          try {
+            const newSchema = builderInstance.instance.schema
+            if (newSchema) {
+              setFormSchema(sanitizeSchema(newSchema))
+              setBuilderError(null)
+            }
+          } catch (err) {
+            console.error('[FormBuilder] Error processing schema change:', err)
+          }
+        })
+      } catch (err) {
+        console.error('[FormBuilder] Initialization error:', err)
+        if (mounted) {
+          setBuilderError(`Error al inicializar el editor: ${err.message}`)
+        }
+      }
     }
-  }
+
+    // Use setTimeout to ensure DOM is fully ready
+    const timerId = setTimeout(initBuilder, 100)
+
+    return () => {
+      mounted = false
+      clearTimeout(timerId)
+      if (builderRef.current) {
+        builderRef.current.instance.destroy()
+        builderRef.current = null
+      }
+    }
+  }, [id]) // Only re-init when ID changes, NOT when schema changes
 
   const handleSave = async (e) => {
     e.preventDefault()
@@ -134,30 +204,25 @@ const FormBuilderPage = () => {
 
         {/* Full width builder */}
         <div className="form-builder-full">
-          <div className="formio-builder-wrapper">
+          <div className="formio-builder-wrapper" key={id || 'new-form'}>
             {builderError ? (
               <div className="alert alert-error" style={{ margin: '20px' }}>
                 <p>{builderError}</p>
                 <button
                   className="btn btn-secondary"
-                  onClick={() => setBuilderError(null)}
+                  onClick={() => {
+                    setBuilderError(null)
+                    if (containerRef.current) {
+                      containerRef.current.innerHTML = ''
+                    }
+                  }}
                   style={{ marginTop: '8px' }}
                 >
                   Reintentar
                 </button>
               </div>
             ) : (
-              <FormBuilder
-                key={id || 'new-form'}
-                form={sanitizeSchema(formSchema)}
-                onChange={handleSchemaChange}
-                options={{
-                  noeval: true,
-                  hooks: {
-                    beforeSubmit: (submission, next) => next(null, submission)
-                  }
-                }}
-              />
+              <div ref={containerRef} />
             )}
           </div>
         </div>
