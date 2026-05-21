@@ -16,7 +16,7 @@ import ExpedientesPanel from './components/expedientes/Expedientes'
 import BandejaTareas from './components/bandeja/BandejaTareas'
 import Login from './Login.jsx'
 import FormList from './components/forms/FormList'
-import FormBuilder from './components/forms/FormBuilder'
+import FormBuilderPage from './components/forms/FormBuilder'
 import FormAssignment from './components/forms/FormAssignment'
 import FormResponses from './components/forms/FormResponses'
 
@@ -104,8 +104,8 @@ const SidebarLayout = () => {
           <Route path="expedientes" element={<ExpedientesWrapper user={user} />} />
           <Route path="bandeja" element={<BandejaTareas user={user} />} />
           <Route path="formularios" element={<FormList />} />
-          <Route path="formularios/crear" element={<FormBuilder />} />
-          <Route path="formularios/:id/editar" element={<FormBuilder />} />
+          <Route path="formularios/crear" element={<FormBuilderPage />} />
+          <Route path="formularios/:id/editar" element={<FormBuilderPage />} />
           <Route path="formularios/asignar" element={<FormAssignment />} />
           <Route path="formularios/:id/respuestas" element={<FormResponses />} />
         </Routes>

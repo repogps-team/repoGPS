@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useApi } from '../../hooks/useApi'
+import { FormBuilder } from '@formio/react'
 
-const FormBuilder = () => {
+const FormBuilderPage = () => {
   const { id } = useParams()
   const navigate = useNavigate()
   const { get, post, put } = useApi()
@@ -113,9 +114,15 @@ const FormBuilder = () => {
         {/* Full width builder */}
         <div className="form-builder-full">
           <div className="formio-builder-wrapper">
-            <FormIOBuilderComponent
-              schema={formSchema}
+            <FormBuilder
+              form={formSchema}
               onChange={setFormSchema}
+              options={{
+                noeval: true,
+                hooks: {
+                  beforeSubmit: (submission, next) => next(null, submission)
+                }
+              }}
             />
           </div>
         </div>
@@ -130,100 +137,4 @@ const FormBuilder = () => {
   )
 }
 
-const FormIOBuilderComponent = ({ schema, onChange }) => {
-  const containerRef = useRef(null)
-  const builderRef = useRef(null)
-  const schemaRef = useRef(schema)
-  const onChangeRef = useRef(onChange)
-  const debounceTimer = useRef(null)
-  const isUpdatingFromProp = useRef(false)
-
-  // Keep refs in sync
-  useEffect(() => { schemaRef.current = schema }, [schema])
-  useEffect(() => { onChangeRef.current = onChange }, [onChange])
-
-  useEffect(() => {
-    let mounted = true
-
-    const initBuilder = async () => {
-      // Wait for next tick to ensure DOM is ready
-      await new Promise(resolve => setTimeout(resolve, 100))
-      
-      if (!containerRef.current || !mounted) return
-
-      try {
-        const mod = await import('formiojs')
-        const FormBuilderClass = mod.FormBuilder || mod.default?.FormBuilder
-        if (!FormBuilderClass) {
-          console.error('FormIO FormBuilder not found')
-          return
-        }
-
-        // Suppress Missing projectId warning
-        const FormioClass = mod.Formio || mod.default
-        if (FormioClass) {
-          FormioClass.setBaseUrl('')
-          FormioClass.setProjectUrl('')
-        }
-
-        // Ensure schema is valid
-        const initialSchema = schemaRef.current || { display: 'form', components: [] }
-
-        const builder = new FormBuilderClass(containerRef.current, initialSchema, {
-          noeval: true,
-          hooks: {
-            beforeSubmit: (submission, next) => next(null, submission)
-          }
-        })
-
-        builderRef.current = builder
-
-        builder.instance.on('change', () => {
-          if (!mounted || isUpdatingFromProp.current) return
-          
-          const newSchema = builder.instance.schema
-          if (!newSchema) return
-
-          // Debounce to prevent infinite loop and excessive state updates
-          if (debounceTimer.current) clearTimeout(debounceTimer.current)
-          debounceTimer.current = setTimeout(() => {
-            if (mounted && onChangeRef.current) {
-              onChangeRef.current(newSchema)
-            }
-          }, 300)
-        })
-      } catch (err) {
-        console.error('Error al inicializar FormIO Builder:', err)
-      }
-    }
-
-    initBuilder()
-
-    return () => {
-      mounted = false
-      if (debounceTimer.current) clearTimeout(debounceTimer.current)
-      if (builderRef.current && builderRef.current.instance) {
-        builderRef.current.instance.destroy()
-        builderRef.current = null
-      }
-    }
-  }, [])
-
-  // Update builder when schema changes from parent (e.g., initial load or save)
-  useEffect(() => {
-    if (!builderRef.current || !builderRef.current.instance) return
-    
-    // Avoid triggering change event when updating from prop
-    isUpdatingFromProp.current = true
-    
-    builderRef.current.instance.setForm(schema).then(() => {
-      isUpdatingFromProp.current = false
-    }).catch(() => {
-      isUpdatingFromProp.current = false
-    })
-  }, [schema])
-
-  return <div ref={containerRef} />
-}
-
-export default FormBuilder
+export default FormBuilderPage
