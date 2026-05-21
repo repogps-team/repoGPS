@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useApi } from '../../hooks/useApi'
+import { formioEsTranslations } from '../../lib/formio-i18n-es'
 
 const FormRenderer = ({ formDefinition, expedienteId, onSubmitComplete, readOnly = false }) => {
   const { post } = useApi()
@@ -38,7 +39,11 @@ const FormRenderer = ({ formDefinition, expedienteId, onSubmitComplete, readOnly
 
         formioRef.current = new FormClass(containerRef.current, parsedSchema, {
           readOnly: readOnly,
-          noeval: true
+          noeval: true,
+          language: 'es',
+          i18n: {
+            es: formioEsTranslations
+          }
         })
 
         formioRef.current.ready.then(() => {

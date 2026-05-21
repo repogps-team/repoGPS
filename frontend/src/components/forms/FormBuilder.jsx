@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useApi } from '../../hooks/useApi'
 import { FormBuilder, Formio } from '@formio/js'
+import { formioEsTranslations } from '../../lib/formio-i18n-es'
 
 // Safe schema validator with complete structure
 const sanitizeSchema = (schema) => {
@@ -84,6 +85,10 @@ const FormBuilderPage = () => {
 
         // Create new builder
         const builderInstance = new FormBuilder(containerRef.current, currentSchema, {
+          language: 'es',
+          i18n: {
+            es: formioEsTranslations
+          },
           noeval: true,
           hooks: {
             beforeSubmit: (submission, next) => next(null, submission)

@@ -262,9 +262,9 @@ body {
 .formio-dialog .tab-component-tabs.nav-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  padding: 6px 10px 0;
-  background: #f3f4f6;
+  gap: 0;
+  padding: 0 10px;
+  background: transparent;
   border-bottom: 1px solid #e5e7eb;
 }
 
@@ -275,19 +275,28 @@ body {
 .formio-dialog .tab-component-tabs .nav-link {
   display: inline-flex;
   align-items: center;
-  padding: 6px 12px;
-  border-radius: 6px 6px 0 0;
-  border: 1px solid transparent;
-  color: #374151;
+  padding: 8px 12px;
+  border-radius: 0;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #6b7280;
   background: transparent;
+  text-decoration: none;
+  font-weight: 400;
+  transition: all 0.15s ease;
+}
+
+.formio-dialog .tab-component-tabs .nav-link:hover {
+  color: #374151;
+  border-bottom-color: #d1d5db;
 }
 
 .formio-dialog .tab-component-tabs .nav-link.active {
-  background: #ffffff;
-  border-color: #e5e7eb;
-  border-bottom-color: #ffffff;
-  color: #111827;
-  font-weight: 600;
+  background: transparent;
+  border-color: transparent;
+  border-bottom: 2px solid #0b74b6;
+  color: #0b74b6;
+  font-weight: 500;
 }
 
 /* Form area dashed boundary */
