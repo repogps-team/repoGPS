@@ -258,6 +258,47 @@ body {
   min-width: 0;
 }
 
+/* Tabs as topbar in component config */
+.formio-dialog .tab-component-tabs.nav-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 10px 0;
+  background: #f3f4f6;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.formio-dialog .tab-component-tabs .nav-item {
+  margin: 0;
+}
+
+.formio-dialog .tab-component-tabs .nav-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 6px 6px 0 0;
+  border: 1px solid transparent;
+  color: #374151;
+  background: transparent;
+}
+
+.formio-dialog .tab-component-tabs .nav-link.active {
+  background: #ffffff;
+  border-color: #e5e7eb;
+  border-bottom-color: #ffffff;
+  color: #111827;
+  font-weight: 600;
+}
+
+/* Form area dashed boundary */
+.formbuilder .formarea .formio-builder-form {
+  border: 2px dashed #cbd5e1;
+  border-radius: 6px;
+  padding: 12px;
+  min-height: 420px;
+  background: #ffffff;
+}
+
 /* Sidebar groups like the reference */
 .formbuilder .formbuilder-sidebar .formcomponents,
 .formbuilder .builder-sidebar .formcomponent-group .formcomponents,
