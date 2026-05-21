@@ -17,7 +17,7 @@ const FormRenderer = ({ formDefinition, expedienteId, onSubmitComplete, readOnly
 
     const initForm = async () => {
       try {
-        const mod = await import('formiojs')
+        const mod = await import('@formio/js')
         const FormClass = mod.Form || mod.default?.Form
         const FormioClass = mod.Formio || mod.default
 
