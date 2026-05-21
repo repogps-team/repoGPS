@@ -133,3 +133,40 @@ INSERT INTO historial_etapas (expediente_id, etapa_anterior_id, etapa_nueva_id, 
 INSERT INTO tareas_asignadas (expediente_id, etapa_id, usuario_id, tipo_tarea, estado, observacion) VALUES
 (2, 3, 3, 'visacion', 'pendiente', 'Visar Charla de Seguridad Abril'),
 (3, 2, 2, 'revision', 'completada', 'Auditoria completada');
+
+-- ******************************************************
+-- FORMULARIOS DINAMICOS (FormIO)
+-- ******************************************************
+
+-- Definiciones de formularios (admin crea con drag-and-drop)
+CREATE TABLE form_definitions (
+    id SERIAL PRIMARY KEY,
+    nombre VARCHAR(200) NOT NULL,
+    descripcion TEXT,
+    schema JSONB NOT NULL,  -- FormIO form schema JSON
+    estado_activo BOOLEAN DEFAULT true,
+    creado_por INTEGER REFERENCES db_usuarios.usuarios(id),
+    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Asignacion de formularios a expedientes
+CREATE TABLE form_assignments (
+    id SERIAL PRIMARY KEY,
+    form_definition_id INTEGER REFERENCES form_definitions(id) ON DELETE CASCADE,
+    expediente_id INTEGER REFERENCES expedientes(id) ON DELETE CASCADE,
+    creado_por INTEGER REFERENCES db_usuarios.usuarios(id),
+    fecha_asignacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(form_definition_id, expediente_id)
+);
+
+-- Respuestas de formularios
+CREATE TABLE form_responses (
+    id SERIAL PRIMARY KEY,
+    form_definition_id INTEGER REFERENCES form_definitions(id) ON DELETE CASCADE,
+    expediente_id INTEGER REFERENCES expedientes(id) ON DELETE CASCADE,
+    usuario_id INTEGER REFERENCES db_usuarios.usuarios(id),
+    data JSONB NOT NULL,  -- FormIO submission data
+    fecha_envio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    estado VARCHAR(20) DEFAULT 'completado'
+);

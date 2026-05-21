@@ -1916,6 +1916,13 @@ app.get("/api/subtipos", async (req, res) => {
   }
 });
 
+// ============================================
+// FORMULARIOS DINAMICOS (FormIO)
+// ============================================
+
+const formRoutes = require('./src/routes/forms');
+app.use(formRoutes(pool, authMiddleware, MS_USUARIOS_URL));
+
 // Servidor
 const PORT = process.env.PORT || 3002;
 resolveTareasEtapaColumn().finally(() => {

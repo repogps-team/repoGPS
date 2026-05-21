@@ -15,6 +15,10 @@ import EtapasPanel from './components/procesos/Etapas'
 import ExpedientesPanel from './components/expedientes/Expedientes'
 import BandejaTareas from './components/bandeja/BandejaTareas'
 import Login from './Login.jsx'
+import FormList from './components/forms/FormList'
+import FormBuilder from './components/forms/FormBuilder'
+import FormAssignment from './components/forms/FormAssignment'
+import FormResponses from './components/forms/FormResponses'
 
 // esAdmin: rol_id === 1
 const esAdmin = (user) => user?.rol_id === 1
@@ -29,11 +33,12 @@ const titulos = {
   categorias: 'Categorías',
   procesos: 'Procesos',
   etapas: 'Etapas',
-  expedientes: 'Expedientes'
+  expedientes: 'Expedientes',
+  formularios: 'Formularios'
 }
 
 // Menús por rol
-const menuAdmin = ['dashboard', 'usuarios', 'contratistas', 'areas', 'disciplinas', 'categorias', 'procesos', 'etapas', 'expedientes']
+const menuAdmin = ['dashboard', 'usuarios', 'contratistas', 'areas', 'disciplinas', 'categorias', 'procesos', 'etapas', 'expedientes', 'formularios']
 const menuNoAdmin = ['dashboard', 'bandeja', 'expedientes']
 
 // Mapeo de rutas a secciones
@@ -47,7 +52,8 @@ const rutaASeccion = {
   '/procesos': 'procesos',
   '/etapas': 'etapas',
   '/expedientes': 'expedientes',
-  '/bandeja': 'bandeja'
+  '/bandeja': 'bandeja',
+  '/formularios': 'formularios'
 }
 
 // Wrapper para Expedientes que lee filtros de la URL
@@ -97,6 +103,11 @@ const SidebarLayout = () => {
           <Route path="etapas" element={<EtapasPanel />} />
           <Route path="expedientes" element={<ExpedientesWrapper user={user} />} />
           <Route path="bandeja" element={<BandejaTareas user={user} />} />
+          <Route path="formularios" element={<FormList />} />
+          <Route path="formularios/crear" element={<FormBuilder />} />
+          <Route path="formularios/:id/editar" element={<FormBuilder />} />
+          <Route path="formularios/asignar" element={<FormAssignment />} />
+          <Route path="formularios/:id/respuestas" element={<FormResponses />} />
         </Routes>
       </Content>
     </div>
