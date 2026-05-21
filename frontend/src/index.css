@@ -242,6 +242,58 @@ body {
   max-width: 260px;
 }
 
+/* Sidebar groups like the reference */
+.formbuilder .formbuilder-sidebar .formcomponents {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  background: #f3f4f6;
+  border-radius: 4px;
+}
+
+/* Category headers */
+.formbuilder .formbuilder-sidebar .formcomponent-group-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #6b7280;
+  padding: 6px 8px;
+  margin: 6px 0 2px;
+  background: #e5e7eb;
+  border-radius: 3px;
+}
+
+/* Individual component buttons */
+.formbuilder .formbuilder-sidebar .formcomponent {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  background: #0b74b6;
+  color: #ffffff;
+  padding: 6px 10px;
+  border: 1px solid #0a68a3;
+  border-radius: 0;
+  font-size: 0.85rem;
+  text-align: left;
+}
+
+.formbuilder .formbuilder-sidebar .formcomponent:hover {
+  background: #0a68a3;
+}
+
+.formbuilder .formbuilder-sidebar .formcomponent i,
+.formbuilder .formbuilder-sidebar .formcomponent svg {
+  margin-right: 8px;
+  color: #ffffff;
+  fill: #ffffff;
+}
+
+/* Keep items stacked, not inline */
+.formbuilder .formbuilder-sidebar .formcomponent-group .formcomponents {
+  display: flex;
+  flex-direction: column;
+}
+
 .formbuilder .formbuilder-sidebar .formcomponents .formcomponent {
   padding: 6px 10px;
   font-size: 0.85rem;
