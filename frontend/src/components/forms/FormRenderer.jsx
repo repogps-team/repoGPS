@@ -47,15 +47,11 @@ const FormRenderer = ({ formDefinition, expedienteId, onSubmitComplete, readOnly
 
     const initForm = async () => {
       try {
-        const mod = await import('@formio/js')
-        const FormClass = mod.Form || mod.default?.Form
-        const FormioClass = mod.Formio || mod.default
+        const { Formio } = await import('@formio/js')
 
         // Suppress Missing projectId warning
-        if (FormioClass) {
-          FormioClass.setBaseUrl('')
-          FormioClass.setProjectUrl('')
-        }
+        Formio.setBaseUrl('')
+        Formio.setProjectUrl('')
 
         if (formioRef.current) {
           formioRef.current.destroy()
@@ -64,7 +60,8 @@ const FormRenderer = ({ formDefinition, expedienteId, onSubmitComplete, readOnly
 
         console.log('[FormRenderer] Initializing with schema:', JSON.stringify(parsedSchema, null, 2))
 
-        formioRef.current = new FormClass(containerRef.current, parsedSchema, {
+        // Use Formio.createForm — official API, returns ready instance
+        formioRef.current = await Formio.createForm(containerRef.current, parsedSchema, {
           readOnly: readOnly,
           noeval: true,
           language: 'es',
@@ -73,11 +70,9 @@ const FormRenderer = ({ formDefinition, expedienteId, onSubmitComplete, readOnly
           }
         })
 
-        formioRef.current.ready.then(() => {
-          if (!mounted) return
-          formioRef.current.submission = { data: {} }
-          setInitialized(true)
-        })
+        // Set initial empty submission
+        formioRef.current.submission = { data: {} }
+        setInitialized(true)
 
         formioRef.current.on('submit', async (submission) => {
           if (!mounted || readOnly) return
