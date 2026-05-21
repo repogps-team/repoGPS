@@ -36,6 +36,7 @@ const FormBuilderPage = () => {
 
   const containerRef = useRef(null)
   const builderRef = useRef(null)
+  const isUpdatingFromState = useRef(false)
 
   // Load existing form if editing
   useEffect(() => {
@@ -97,6 +98,7 @@ const FormBuilderPage = () => {
         builderInstance.instance.on('change', () => {
           if (!mounted) return
           try {
+            if (isUpdatingFromState.current) return
             const newSchema = builderInstance.instance.schema
             if (newSchema) {
               setFormSchema(sanitizeSchema(newSchema))
@@ -126,6 +128,23 @@ const FormBuilderPage = () => {
       }
     }
   }, [id]) // Only re-init when ID changes, NOT when schema changes
+
+  // When editing, push loaded schema into builder instance
+  useEffect(() => {
+    if (!builderRef.current || !builderRef.current.instance) return
+    try {
+      const nextSchema = sanitizeSchema(formSchema)
+      isUpdatingFromState.current = true
+      builderRef.current.instance.setForm(nextSchema).then(() => {
+        isUpdatingFromState.current = false
+      }).catch(() => {
+        isUpdatingFromState.current = false
+      })
+    } catch (err) {
+      isUpdatingFromState.current = false
+      console.error('[FormBuilder] Error syncing schema to builder:', err)
+    }
+  }, [formSchema])
 
   const handleSave = async (e) => {
     e.preventDefault()
