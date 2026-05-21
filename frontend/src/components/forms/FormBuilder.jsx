@@ -146,10 +146,18 @@ const FormIOBuilderComponent = ({ schema, onChange }) => {
     let mounted = true
 
     const initBuilder = async () => {
+      // Wait for next tick to ensure DOM is ready
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      if (!containerRef.current || !mounted) return
+
       try {
         const mod = await import('formiojs')
         const FormBuilderClass = mod.FormBuilder || mod.default?.FormBuilder
-        if (!containerRef.current || !mounted) return
+        if (!FormBuilderClass) {
+          console.error('FormIO FormBuilder not found')
+          return
+        }
 
         // Suppress Missing projectId warning
         const FormioClass = mod.Formio || mod.default
@@ -158,7 +166,10 @@ const FormIOBuilderComponent = ({ schema, onChange }) => {
           FormioClass.setProjectUrl('')
         }
 
-        const builder = new FormBuilderClass(containerRef.current, schemaRef.current, {
+        // Ensure schema is valid
+        const initialSchema = schemaRef.current || { display: 'form', components: [] }
+
+        const builder = new FormBuilderClass(containerRef.current, initialSchema, {
           noeval: true,
           hooks: {
             beforeSubmit: (submission, next) => next(null, submission)
