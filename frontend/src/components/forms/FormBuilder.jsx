@@ -3,6 +3,15 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useApi } from '../../hooks/useApi'
 import { FormBuilder } from '@formio/react'
 
+// Safe wrapper to ensure schema is always valid
+const sanitizeSchema = (schema) => {
+  if (!schema) return { display: 'form', components: [] }
+  return {
+    display: schema.display || 'form',
+    components: Array.isArray(schema.components) ? schema.components : []
+  }
+}
+
 const FormBuilderPage = () => {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -14,6 +23,7 @@ const FormBuilderPage = () => {
   const [mensaje, setMensaje] = useState(null)
   const [error, setError] = useState(null)
   const [cargando, setCargando] = useState(false)
+  const [builderError, setBuilderError] = useState(null)
 
   useEffect(() => {
     if (id) {
@@ -24,7 +34,8 @@ const FormBuilderPage = () => {
           setNombre(data.nombre)
           setDescripcion(data.descripcion || '')
           if (data.schema) {
-            setFormSchema(typeof data.schema === 'string' ? JSON.parse(data.schema) : data.schema)
+            const parsed = typeof data.schema === 'string' ? JSON.parse(data.schema) : data.schema
+            setFormSchema(sanitizeSchema(parsed))
           }
         } catch (err) {
           setError(err.message)
@@ -35,6 +46,16 @@ const FormBuilderPage = () => {
       cargarFormulario()
     }
   }, [id, get])
+
+  const handleSchemaChange = (newSchema) => {
+    try {
+      setBuilderError(null)
+      setFormSchema(sanitizeSchema(newSchema))
+    } catch (err) {
+      console.error('Error processing schema change:', err)
+      setBuilderError('Error al actualizar el diseño del formulario')
+    }
+  }
 
   const handleSave = async (e) => {
     e.preventDefault()
@@ -114,16 +135,30 @@ const FormBuilderPage = () => {
         {/* Full width builder */}
         <div className="form-builder-full">
           <div className="formio-builder-wrapper">
-            <FormBuilder
-              form={formSchema}
-              onChange={setFormSchema}
-              options={{
-                noeval: true,
-                hooks: {
-                  beforeSubmit: (submission, next) => next(null, submission)
-                }
-              }}
-            />
+            {builderError ? (
+              <div className="alert alert-error" style={{ margin: '20px' }}>
+                <p>{builderError}</p>
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => setBuilderError(null)}
+                  style={{ marginTop: '8px' }}
+                >
+                  Reintentar
+                </button>
+              </div>
+            ) : (
+              <FormBuilder
+                key={id || 'new-form'}
+                form={sanitizeSchema(formSchema)}
+                onChange={handleSchemaChange}
+                options={{
+                  noeval: true,
+                  hooks: {
+                    beforeSubmit: (submission, next) => next(null, submission)
+                  }
+                }}
+              />
+            )}
           </div>
         </div>
 
