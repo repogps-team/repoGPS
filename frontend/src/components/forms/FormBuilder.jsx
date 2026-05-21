@@ -86,8 +86,6 @@ const FormBuilderPage = () => {
 
         // Ensure schema is valid
         const currentSchema = sanitizeSchema(formSchema)
-        console.log('[FormBuilder] Initializing with schema:', JSON.stringify(currentSchema, null, 2))
-
         // Create new builder
         const builderInstance = new FormBuilder(containerRef.current, currentSchema, {
           language: 'es',

@@ -58,8 +58,6 @@ const FormRenderer = ({ formDefinition, expedienteId, onSubmitComplete, readOnly
           formioRef.current = null
         }
 
-        console.log('[FormRenderer] Initializing with schema:', JSON.stringify(parsedSchema, null, 2))
-
         // Use Formio.createForm — official API, returns ready instance
         formioRef.current = await Formio.createForm(containerRef.current, parsedSchema, {
           readOnly: readOnly,
