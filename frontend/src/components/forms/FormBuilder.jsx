@@ -141,11 +141,11 @@ const FormIOBuilderComponent = ({ schema, onChange }) => {
     const initBuilder = async () => {
       try {
         const mod = await import('formiojs')
-        const Formio = mod.default || mod.Formio
+        const FormBuilderClass = mod.FormBuilder || mod.default?.FormBuilder
         const container = document.getElementById('formio-builder')
         if (!container || !mounted) return
 
-        builder = new Formio.Builder(container, schemaRef, {})
+        builder = new FormBuilderClass(container, schemaRef, {})
 
         builder.instance.on('change', () => {
           if (mounted && builder.instance.schema) {

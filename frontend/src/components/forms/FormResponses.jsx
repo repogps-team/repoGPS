@@ -132,14 +132,15 @@ const FormIORenderer = ({ schema, submission, readOnly }) => {
 
     const initForm = async () => {
       try {
-        const { Formio } = await import('formiojs')
+        const mod = await import('formiojs')
+        const FormClass = mod.Form || mod.default?.Form
         const container = document.getElementById(containerId)
         if (!container || !mounted) return
 
         const parsedSchema = typeof schema === 'string' ? JSON.parse(schema) : schema
         const submissionData = submission ? { data: submission } : undefined
 
-        formio = new Formio.Form(container, parsedSchema, {
+        formio = new FormClass(container, parsedSchema, {
           readOnly: readOnly || false,
           submission: submissionData
         })

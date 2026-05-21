@@ -18,7 +18,8 @@ const FormRenderer = ({ formDefinition, expedienteId, onSubmitComplete, readOnly
     const initForm = async () => {
       try {
         const mod = await import('formiojs')
-        const Formio = mod.default || mod.Formio
+        const FormioClass = mod.Formio || mod.default
+        const FormClass = mod.Form || mod.default?.Form
 
         if (formioRef.current) {
           formioRef.current.destroy()
@@ -29,7 +30,7 @@ const FormRenderer = ({ formDefinition, expedienteId, onSubmitComplete, readOnly
           ? JSON.parse(formDefinition.schema)
           : formDefinition.schema
 
-        formioRef.current = new Formio.Form(containerRef.current, parsedSchema, {
+        formioRef.current = new FormClass(containerRef.current, parsedSchema, {
           readOnly: readOnly
         })
 
