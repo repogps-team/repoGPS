@@ -34,6 +34,7 @@ const FormBuilderPage = () => {
   const [error, setError] = useState(null)
   const [cargando, setCargando] = useState(false)
   const [builderError, setBuilderError] = useState(null)
+  const [dataLoaded, setDataLoaded] = useState(false)
 
   const containerRef = useRef(null)
   const builderRef = useRef(null)
@@ -55,15 +56,19 @@ const FormBuilderPage = () => {
           setError(err.message)
         } finally {
           setCargando(false)
+          setDataLoaded(true)
         }
       }
       cargarFormulario()
+    } else {
+      // New form — data is "loaded" (empty schema is fine)
+      setDataLoaded(true)
     }
   }, [id, get])
 
-  // Initialize FormIO Builder imperatively
+  // Initialize FormIO Builder imperatively (only after data is loaded)
   useEffect(() => {
-    if (!containerRef.current) return
+    if (!containerRef.current || !dataLoaded) return
 
     let mounted = true
 
@@ -130,7 +135,7 @@ const FormBuilderPage = () => {
         builderRef.current = null
       }
     }
-  }, [id]) // Only re-init when ID changes, NOT when schema changes
+  }, [id, dataLoaded]) // Re-init when ID or dataLoaded changes
 
   const handleSave = async (e) => {
     e.preventDefault()
@@ -156,12 +161,11 @@ const FormBuilderPage = () => {
       if (id) {
         await put(`/api/forms/${id}`, body)
         setMensaje('Formulario actualizado correctamente')
+        setTimeout(() => navigate('/formularios'), 1200)
       } else {
         await post('/api/forms', body)
         setMensaje('Formulario creado correctamente')
-        setNombre('')
-        setDescripcion('')
-        setFormSchema({ display: 'form', components: [] })
+        setTimeout(() => navigate('/formularios'), 1200)
       }
     } catch (err) {
       setError(err.message)
