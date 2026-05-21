@@ -140,7 +140,8 @@ const FormIOBuilderComponent = ({ schema, onChange }) => {
 
     const initBuilder = async () => {
       try {
-        const { Formio } = await import('formiojs')
+        const mod = await import('formiojs')
+        const Formio = mod.default || mod.Formio
         const container = document.getElementById('formio-builder')
         if (!container || !mounted) return
 

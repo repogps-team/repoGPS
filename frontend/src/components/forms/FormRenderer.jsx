@@ -17,7 +17,8 @@ const FormRenderer = ({ formDefinition, expedienteId, onSubmitComplete, readOnly
 
     const initForm = async () => {
       try {
-        const { Formio } = await import('formiojs')
+        const mod = await import('formiojs')
+        const Formio = mod.default || mod.Formio
 
         if (formioRef.current) {
           formioRef.current.destroy()
