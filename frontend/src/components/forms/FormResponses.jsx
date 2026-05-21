@@ -134,6 +134,14 @@ const FormIORenderer = ({ schema, submission, readOnly }) => {
       try {
         const mod = await import('formiojs')
         const FormClass = mod.Form || mod.default?.Form
+        const FormioClass = mod.Formio || mod.default
+
+        // Suppress Missing projectId warning
+        if (FormioClass) {
+          FormioClass.setBaseUrl('')
+          FormioClass.setProjectUrl('')
+        }
+
         const container = document.getElementById(containerId)
         if (!container || !mounted) return
 
@@ -142,7 +150,8 @@ const FormIORenderer = ({ schema, submission, readOnly }) => {
 
         formio = new FormClass(container, parsedSchema, {
           readOnly: readOnly || false,
-          submission: submissionData
+          submission: submissionData,
+          noeval: true
         })
       } catch (err) {
         console.error('Error al inicializar FormIO Renderer:', err)

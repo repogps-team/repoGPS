@@ -18,8 +18,14 @@ const FormRenderer = ({ formDefinition, expedienteId, onSubmitComplete, readOnly
     const initForm = async () => {
       try {
         const mod = await import('formiojs')
-        const FormioClass = mod.Formio || mod.default
         const FormClass = mod.Form || mod.default?.Form
+        const FormioClass = mod.Formio || mod.default
+
+        // Suppress Missing projectId warning
+        if (FormioClass) {
+          FormioClass.setBaseUrl('')
+          FormioClass.setProjectUrl('')
+        }
 
         if (formioRef.current) {
           formioRef.current.destroy()
@@ -31,7 +37,8 @@ const FormRenderer = ({ formDefinition, expedienteId, onSubmitComplete, readOnly
           : formDefinition.schema
 
         formioRef.current = new FormClass(containerRef.current, parsedSchema, {
-          readOnly: readOnly
+          readOnly: readOnly,
+          noeval: true
         })
 
         formioRef.current.ready.then(() => {
