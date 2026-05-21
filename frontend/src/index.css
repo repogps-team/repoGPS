@@ -242,10 +242,29 @@ body {
   max-width: 260px;
 }
 
-/* Sidebar groups like the reference */
-.formbuilder .formbuilder-sidebar .formcomponents {
+/* Ensure sidebar + form area are side-by-side */
+.formbuilder {
   display: flex;
-  flex-direction: column;
+  gap: 16px;
+}
+
+.formbuilder .builder-sidebar {
+  flex: 0 0 260px;
+}
+
+.formbuilder .formarea,
+.formbuilder .formio-builder-form {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Sidebar groups like the reference */
+.formbuilder .formbuilder-sidebar .formcomponents,
+.formbuilder .builder-sidebar .formcomponent-group .formcomponents,
+.formbuilder .builder-sidebar [ref="sidebar-container"],
+.formbuilder .builder-sidebar .d-grid {
+  display: flex !important;
+  flex-direction: column !important;
   gap: 2px;
   padding: 8px;
   background: #f3f4f6;
@@ -264,7 +283,9 @@ body {
 }
 
 /* Individual component buttons */
-.formbuilder .formbuilder-sidebar .formcomponent {
+.formbuilder .formbuilder-sidebar .formcomponent,
+.formbuilder .builder-sidebar .formcomponent,
+.formbuilder .builder-sidebar [ref="sidebar-component"] {
   display: flex;
   align-items: center;
   width: 100%;
