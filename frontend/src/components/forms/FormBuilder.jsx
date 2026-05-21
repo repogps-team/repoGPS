@@ -85,31 +85,34 @@ const FormBuilder = () => {
       {mensaje && <div className="alert alert-success">{mensaje}</div>}
       {error && <div className="alert alert-error">{error}</div>}
 
-      <form onSubmit={handleSave} className="form-grid">
-        <div className="field">
-          <label>Nombre</label>
-          <input
-            type="text"
-            value={nombre}
-            onChange={e => setNombre(e.target.value)}
-            required
-            placeholder="Nombre del formulario"
-          />
+      <form onSubmit={handleSave} className="form-builder-layout">
+        {/* Meta fields row */}
+        <div className="form-meta-row">
+          <div className="field">
+            <label>Nombre</label>
+            <input
+              type="text"
+              value={nombre}
+              onChange={e => setNombre(e.target.value)}
+              required
+              placeholder="Nombre del formulario"
+            />
+          </div>
+
+          <div className="field">
+            <label>Descripción</label>
+            <textarea
+              value={descripcion}
+              onChange={e => setDescripcion(e.target.value)}
+              placeholder="Descripción opcional"
+              rows={2}
+            />
+          </div>
         </div>
 
-        <div className="field">
-          <label>Descripción</label>
-          <textarea
-            value={descripcion}
-            onChange={e => setDescripcion(e.target.value)}
-            placeholder="Descripción opcional"
-            rows={3}
-          />
-        </div>
-
-        <div className="field field--full">
-          <label>Diseño del Formulario</label>
-          <div className="formio-builder-wrapper" style={{ minHeight: '500px', border: '1px solid var(--border-color, #ddd)', borderRadius: '4px' }}>
+        {/* Full width builder */}
+        <div className="form-builder-full">
+          <div className="formio-builder-wrapper">
             <FormIOBuilderComponent
               schema={formSchema}
               onChange={setFormSchema}

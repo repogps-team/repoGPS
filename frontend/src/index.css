@@ -208,6 +208,31 @@ body {
   padding: 25px;
 }
 
+/* Form Builder Layout */
+.form-builder-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 25px;
+}
+
+.form-meta-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.form-builder-full {
+  width: 100%;
+}
+
+.formio-builder-wrapper {
+  min-height: 600px;
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
 .field { display: flex; flex-direction: column; gap: 8px; }
 .field label { font-size: 0.9rem; font-weight: 500; color: var(--text-main); }
 
