@@ -176,28 +176,6 @@ body {
 .content-header h1 { font-size: 1.8rem; color: var(--text-main); margin-bottom: 5px; }
 .content-header p { color: var(--text-muted); }
 
-/* === SIDEBAR HAMBURGER TOGGLE === */
-.sidebar-hamburger {
-  display: none;
-  background: none;
-  border: none;
-  color: #e2e8f0;
-  font-size: 1.3rem;
-  cursor: pointer;
-  padding: 8px;
-  margin: -8px;
-  border-radius: var(--radius-sm);
-  transition: background 0.2s;
-  line-height: 1;
-  min-width: 44px;
-  min-height: 44px;
-  align-items: center;
-  justify-content: center;
-}
-.sidebar-hamburger:hover {
-  background-color: #1e293b;
-}
-
 /* === SIDEBAR BACKDROP === */
 .sidebar-backdrop {
   position: fixed;
@@ -216,9 +194,84 @@ body {
   to { opacity: 1; }
 }
 
-/* === MOBILE: SIDEBAR OVERLAY === */
+/* === FLOATING HAMBURGER (admin mobile only) === */
+.floating-hamburger {
+  display: none;
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 101;
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  font-size: 1.4rem;
+  cursor: pointer;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-md);
+  transition: background 0.2s;
+  line-height: 1;
+}
+.floating-hamburger:hover {
+  filter: brightness(1.1);
+}
+
+/* === BOTTOM BAR (non-admin mobile only) === */
+.bottom-bar {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: #0f172a;
+  border-top: 1px solid #1e293b;
+  justify-content: space-around;
+  align-items: center;
+  padding: 6px 0 env(safe-area-inset-bottom, 6px) 0;
+  height: 64px;
+}
+
+.bottom-bar-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 12px;
+  color: #94a3b8;
+  text-decoration: none;
+  font-size: 0.65rem;
+  transition: color 0.2s;
+  min-width: 64px;
+}
+
+.bottom-bar-item.active {
+  color: var(--primary-color);
+}
+
+.bottom-bar-item svg {
+  width: 24px;
+  height: 24px;
+}
+
+.bottom-bar-label {
+  font-size: 0.65rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+[data-theme='dark'] .bottom-bar {
+  background: #0f172a;
+  border-top-color: #1e293b;
+}
+
+/* === MOBILE: OVERRIDE SIDEBAR + SHOW FLOATING/BOTTOM === */
 @media (max-width: 768px) {
-  .sidebar {
+  /* --- Admin: sidebar overlay + floating hamburger --- */
+  .layout.role-admin .sidebar {
     position: fixed;
     top: 0;
     left: 0;
@@ -228,16 +281,25 @@ body {
     transition: transform 0.3s ease;
   }
 
-  .sidebar.sidebar--open {
+  .layout.role-admin .sidebar.sidebar--open {
     transform: translateX(0);
   }
 
-  .sidebar-hamburger {
+  .layout.role-admin .floating-hamburger {
     display: flex;
   }
 
-  .layout {
-    /* Keep content full-width when sidebar is fixed overlay */
+  /* --- Non-admin: hide sidebar, show bottom bar --- */
+  .layout.role-non-admin .sidebar {
+    display: none;
+  }
+
+  .layout.role-non-admin .bottom-bar {
+    display: flex;
+  }
+
+  .layout.role-non-admin .content {
+    padding-bottom: 80px;
   }
 }
 

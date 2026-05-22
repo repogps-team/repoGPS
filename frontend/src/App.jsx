@@ -21,6 +21,7 @@ import FormAssignment from './components/forms/FormAssignment'
 import FormResponses from './components/forms/FormResponses'
 import Reportes from './pages/Reportes'
 import SyncIndicator from './components/layout/SyncIndicator'
+import BottomBar from './components/layout/BottomBar'
 import { warmupCache } from './lib/cacheWarmup'
 
 // esAdmin: rol_id === 1
@@ -98,17 +99,30 @@ const SidebarLayout = () => {
     logout()
   }
 
+  const isAdmin = esAdmin(user)
+
   return (
-    <div className="layout">
+    <div className={`layout ${isAdmin ? 'role-admin' : 'role-non-admin'}`}>
       <SyncIndicator />
       {sidebarOpen && <div className="sidebar-backdrop" onClick={closeSidebar} />}
+
+      {/* Floating hamburger for admin mobile */}
+      {isAdmin && (
+        <button
+          className="floating-hamburger"
+          onClick={toggleSidebar}
+          aria-label={sidebarOpen ? 'Cerrar menú' : 'Abrir menú'}
+        >
+          {sidebarOpen ? '✕' : '☰'}
+        </button>
+      )}
+
       <Sidebar
         onLogout={handleLogout}
         menuItems={menuItems}
         titulos={titulos}
         usuario={user}
         sidebarOpen={sidebarOpen}
-        toggleSidebar={toggleSidebar}
         onNavClick={closeSidebar}
       />
       <Content titulo={titulos[seccionActual]}>
@@ -131,6 +145,9 @@ const SidebarLayout = () => {
           <Route path="reportes" element={<Reportes />} />
         </Routes>
       </Content>
+
+      {/* Bottom navigation for non-admin mobile */}
+      {!isAdmin && <BottomBar titulos={titulos} />}
     </div>
   )
 }
