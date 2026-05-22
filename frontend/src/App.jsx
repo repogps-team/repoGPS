@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Routes, Route, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from './context/useAuth'
 import { ThemeProvider } from './context/ThemeContext.jsx'
@@ -77,6 +77,10 @@ const ExpedientesWrapper = ({ user }) => {
 const SidebarLayout = () => {
   const location = useLocation()
   const { user, logout } = useAuth()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  const toggleSidebar = () => setSidebarOpen(prev => !prev)
+  const closeSidebar = () => setSidebarOpen(false)
 
   // Determinar sección actual basada en la ruta
   const seccionActual = rutaASeccion[location.pathname] || 'dashboard'
@@ -97,12 +101,15 @@ const SidebarLayout = () => {
   return (
     <div className="layout">
       <SyncIndicator />
+      {sidebarOpen && <div className="sidebar-backdrop" onClick={closeSidebar} />}
       <Sidebar
-        seccionActual={seccionActual}
         onLogout={handleLogout}
         menuItems={menuItems}
         titulos={titulos}
         usuario={user}
+        sidebarOpen={sidebarOpen}
+        toggleSidebar={toggleSidebar}
+        onNavClick={closeSidebar}
       />
       <Content titulo={titulos[seccionActual]}>
         <Routes>

@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 
-const Sidebar = ({ onLogout, menuItems = [], titulos = {}, usuario = {} }) => {
+const Sidebar = ({ onLogout, menuItems = [], titulos = {}, usuario = {}, sidebarOpen = false, toggleSidebar, onNavClick }) => {
   const location = useLocation()
 
   // Categorías para el menú admin
@@ -36,8 +36,15 @@ const Sidebar = ({ onLogout, menuItems = [], titulos = {}, usuario = {} }) => {
   }
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${sidebarOpen ? 'sidebar--open' : ''}`}>
       <div className="brand">
+        <button
+          className="sidebar-hamburger"
+          onClick={toggleSidebar}
+          aria-label={sidebarOpen ? 'Cerrar menú' : 'Abrir menú'}
+        >
+          {sidebarOpen ? '✕' : '☰'}
+        </button>
         <div className="brand-mark">GS</div>
         <div>
           <h2>repoGPS</h2>
@@ -59,6 +66,7 @@ const Sidebar = ({ onLogout, menuItems = [], titulos = {}, usuario = {} }) => {
                   key={id}
                   to={ruta}
                   className={`nav-item ${isActive ? 'active' : ''}`}
+                  onClick={onNavClick}
                 >
                   {titulos[id] || id}
                 </Link>
