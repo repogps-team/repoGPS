@@ -30,6 +30,4 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-        run: npx vercel deploy --prod --token $VERCEL_TOKEN \
-          --build-env VITE_API_URL="" \
-          --build-env VITE_PWA_URL="https://repo-gps.vercel.app"
+        run: npx vercel deploy --prod --token $VERCEL_TOKEN --build-env VITE_API_URL="" --build-env VITE_PWA_URL="https://repo-gps.vercel.app"
