@@ -46,7 +46,7 @@ export default function Reportes() {
     const uid = DASHBOARD_UIDS[activeTab]
     const params = new URLSearchParams({
       orgId: '1',
-      kiosk: '',
+      kiosk: 'tv',
       refresh: '30s',
     })
 
@@ -57,7 +57,8 @@ export default function Reportes() {
     if (fechaDesde) params.set('var-fecha_desde', fechaDesde)
     if (fechaHasta) params.set('var-fecha_hasta', fechaHasta)
 
-    return `/grafana/d/${uid}?${params.toString()}`
+    // hide Grafana variable UI
+    return `/grafana/d/${uid}?${params.toString()}&var-hide=1`
   }, [activeTab, areaId, contratistaId, procesoId, fechaDesde, fechaHasta])
 
   // Actualizar iframe cuando cambian filtros o tab
