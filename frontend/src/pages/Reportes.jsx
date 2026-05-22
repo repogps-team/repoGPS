@@ -47,6 +47,7 @@ export default function Reportes() {
     const params = new URLSearchParams({
       orgId: '1',
       kiosk: 'tv',
+      fullscreen: '1',
       refresh: '30s',
     })
 
@@ -57,8 +58,7 @@ export default function Reportes() {
     if (fechaDesde) params.set('var-fecha_desde', fechaDesde)
     if (fechaHasta) params.set('var-fecha_hasta', fechaHasta)
 
-    // hide Grafana variable UI
-    return `/grafana/d/${uid}?${params.toString()}&var-hide=1`
+    return `/grafana/d/${uid}?${params.toString()}`
   }, [activeTab, areaId, contratistaId, procesoId, fechaDesde, fechaHasta])
 
   // Actualizar iframe cuando cambian filtros o tab
@@ -73,6 +73,10 @@ export default function Reportes() {
     setFechaDesde('')
     setFechaHasta('')
   }
+
+  const areasActivas = areas.filter(area => area.estado_activo !== false)
+  const contratistasActivos = contratistas.filter(contratista => contratista.estado_activo !== false)
+  const procesosActivos = procesos.filter(proceso => proceso.estado_activo !== false)
 
   const hasFilters = areaId || contratistaId || procesoId || fechaDesde || fechaHasta
 
@@ -110,7 +114,7 @@ export default function Reportes() {
             <label>Área</label>
             <select value={areaId} onChange={e => setAreaId(e.target.value)}>
               <option value="">Todas</option>
-              {areas.map(a => (
+              {areasActivas.map(a => (
                 <option key={a.id} value={a.id}>{a.nombre}</option>
               ))}
             </select>
@@ -120,7 +124,7 @@ export default function Reportes() {
             <label>Contratista</label>
             <select value={contratistaId} onChange={e => setContratistaId(e.target.value)}>
               <option value="">Todos</option>
-              {contratistas.map(c => (
+              {contratistasActivos.map(c => (
                 <option key={c.id} value={c.id}>{c.razon_social}</option>
               ))}
             </select>
@@ -130,7 +134,7 @@ export default function Reportes() {
             <label>Proceso</label>
             <select value={procesoId} onChange={e => setProcesoId(e.target.value)}>
               <option value="">Todos</option>
-              {procesos.map(p => (
+              {procesosActivos.map(p => (
                 <option key={p.id} value={p.id}>{p.nombre}</option>
               ))}
             </select>
