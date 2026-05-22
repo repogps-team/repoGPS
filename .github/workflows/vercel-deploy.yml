@@ -13,9 +13,6 @@ jobs:
   deploy:
     name: Build y Deploy a Vercel
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./frontend
 
     steps:
       - uses: actions/checkout@v4
