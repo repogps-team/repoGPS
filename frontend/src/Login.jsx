@@ -20,12 +20,9 @@ function Login() {
   const PWA_URL = import.meta.env.VITE_PWA_URL || "https://repo-gps.vercel.app";
   const isDark = theme === 'dark'
 
-  // Detectar si es mobile (touch + userAgent) y NO está en Vercel
+  // Mostrar botón para ir a la PWA en Vercel, solo cuando NO estamos ya en Vercel
   const mostrarPWA = useMemo(() => {
-    const isMobile = navigator.maxTouchPoints > 0 &&
-      /Mobi|Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-    const isVercel = window.location.hostname.includes('vercel.app')
-    return isMobile && !isVercel
+    return !window.location.hostname.includes('vercel.app')
   }, [])
 
   const ThemeToggle = () => (
