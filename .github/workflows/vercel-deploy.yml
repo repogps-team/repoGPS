@@ -27,12 +27,19 @@ jobs:
           cache: 'npm'
           cache-dependency-path: './frontend/package-lock.json'
 
-      - name: Instalar dependencias
-        run: npm ci
-
-      - name: Build
-        run: npm run build
+      - name: Pull Vercel environment
         env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: npx vercel pull --yes --environment=production --token $VERCEL_TOKEN
+
+      - name: Build con Vercel
+        run: npx vercel build --prod --token $VERCEL_TOKEN
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VITE_API_URL: ''
           VITE_PWA_URL: 'https://repo-gps.vercel.app'
 
@@ -41,7 +48,4 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-        run: |
-          npm i -g vercel@latest
-          npx vercel deploy --prebuilt --prod --token $VERCEL_TOKEN \
-            --scope repogps-project
+        run: npx vercel deploy --prebuilt --prod --token $VERCEL_TOKEN
