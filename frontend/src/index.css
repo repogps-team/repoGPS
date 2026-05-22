@@ -194,30 +194,30 @@ body {
   to { opacity: 1; }
 }
 
-/* === FLOATING HAMBURGER (admin mobile only) === */
-.floating-hamburger {
+/* === HAMBURGER IN CONTENT HEADER (admin mobile only) === */
+.content-header .hamburger {
   display: none;
-  position: fixed;
-  top: 12px;
-  left: 12px;
-  z-index: 101;
-  background: var(--primary-color);
-  color: white;
+  background: none;
   border: none;
-  font-size: 1.4rem;
+  color: var(--text-main);
+  font-size: 1.5rem;
   cursor: pointer;
-  width: 44px;
-  height: 44px;
-  border-radius: var(--radius-md);
+  padding: 4px;
+  margin-right: 8px;
+  border-radius: var(--radius-sm);
+  min-width: 44px;
+  min-height: 44px;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--shadow-md);
-  transition: background 0.2s;
+  vertical-align: middle;
   line-height: 1;
+  transition: background 0.2s;
 }
-.floating-hamburger:hover {
-  filter: brightness(1.1);
+.content-header .hamburger:hover {
+  background: var(--bg-panel);
 }
+
+/* === BOTTOM BAR (non-admin mobile only) === */
 
 /* === BOTTOM BAR (non-admin mobile only) === */
 .bottom-bar {
@@ -263,14 +263,16 @@ body {
   white-space: nowrap;
 }
 
-[data-theme='dark'] .bottom-bar {
-  background: #0f172a;
-  border-top-color: #1e293b;
+.bottom-bar-logout {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
 }
 
 /* === MOBILE: OVERRIDE SIDEBAR + SHOW FLOATING/BOTTOM === */
 @media (max-width: 768px) {
-  /* --- Admin: sidebar overlay + floating hamburger --- */
+  /* --- Admin: sidebar overlay + hamburger in header --- */
   .layout.role-admin .sidebar {
     position: fixed;
     top: 0;
@@ -285,8 +287,16 @@ body {
     transform: translateX(0);
   }
 
-  .layout.role-admin .floating-hamburger {
-    display: flex;
+  .layout.role-admin .content-header .hamburger {
+    display: inline-flex;
+    flex-shrink: 0;
+  }
+
+  .layout.role-admin .content-header h1 {
+    font-size: 1.3rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   /* --- Non-admin: hide sidebar, show bottom bar --- */
@@ -301,6 +311,15 @@ body {
   .layout.role-non-admin .content {
     padding-bottom: 80px;
   }
+
+  .layout.role-non-admin .content-header h1 {
+    font-size: 1.3rem;
+  }
+}
+
+[data-theme='dark'] .bottom-bar {
+  background: #0f172a;
+  border-top-color: #1e293b;
 }
 
 .panel {

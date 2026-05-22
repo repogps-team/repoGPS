@@ -16,6 +16,11 @@ const icons = {
     <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
       <path d="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/>
     </svg>
+  ),
+  logout: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+    </svg>
   )
 }
 
@@ -25,7 +30,7 @@ const items = [
   { id: 'expedientes', path: '/expedientes', label: 'Expedientes' }
 ]
 
-const BottomBar = ({ titulos = {} }) => {
+const BottomBar = ({ titulos = {}, onLogout }) => {
   const location = useLocation()
 
   const isActive = (path) => {
@@ -45,6 +50,10 @@ const BottomBar = ({ titulos = {} }) => {
           <span className="bottom-bar-label">{titulos[item.id] || item.label}</span>
         </Link>
       ))}
+      <button className="bottom-bar-item bottom-bar-logout" onClick={onLogout}>
+        {icons.logout}
+        <span className="bottom-bar-label">Salir</span>
+      </button>
     </nav>
   )
 }

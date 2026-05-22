@@ -106,17 +106,6 @@ const SidebarLayout = () => {
       <SyncIndicator />
       {sidebarOpen && <div className="sidebar-backdrop" onClick={closeSidebar} />}
 
-      {/* Floating hamburger for admin mobile */}
-      {isAdmin && (
-        <button
-          className="floating-hamburger"
-          onClick={toggleSidebar}
-          aria-label={sidebarOpen ? 'Cerrar menú' : 'Abrir menú'}
-        >
-          {sidebarOpen ? '✕' : '☰'}
-        </button>
-      )}
-
       <Sidebar
         onLogout={handleLogout}
         menuItems={menuItems}
@@ -125,7 +114,12 @@ const SidebarLayout = () => {
         sidebarOpen={sidebarOpen}
         onNavClick={closeSidebar}
       />
-      <Content titulo={titulos[seccionActual]}>
+      <Content
+        titulo={titulos[seccionActual]}
+        isAdmin={isAdmin}
+        sidebarOpen={sidebarOpen}
+        onToggleSidebar={toggleSidebar}
+      >
         <Routes>
           <Route index element={<Dashboard user={user} esAdmin={esAdmin(user)} />} />
           <Route path="usuarios" element={<UsuariosPanel />} />
@@ -147,7 +141,7 @@ const SidebarLayout = () => {
       </Content>
 
       {/* Bottom navigation for non-admin mobile */}
-      {!isAdmin && <BottomBar titulos={titulos} />}
+      {!isAdmin && <BottomBar titulos={titulos} onLogout={handleLogout} />}
     </div>
   )
 }
