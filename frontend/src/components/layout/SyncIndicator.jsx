@@ -42,7 +42,8 @@ const SyncIndicator = () => {
   }, [refreshCount])
 
   useEffect(() => {
-    refreshCount()
+    // Cargar conteo inicial desde IndexedDB (asíncrono, no bloquea render)
+    getCount().then((count) => setPending(count.pending)).catch(() => {})
     // Escuchar cambios de visibilidad para refrescar conteo
     const onVisible = () => {
       if (document.visibilityState === 'visible') refreshCount()
