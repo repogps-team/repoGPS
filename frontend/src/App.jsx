@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Routes, Route, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from './context/useAuth'
 import { ThemeProvider } from './context/ThemeContext.jsx'
@@ -21,6 +21,7 @@ import FormAssignment from './components/forms/FormAssignment'
 import FormResponses from './components/forms/FormResponses'
 import Reportes from './pages/Reportes'
 import SyncIndicator from './components/layout/SyncIndicator'
+import BottomBar from './components/layout/BottomBar'
 import { warmupCache } from './lib/cacheWarmup'
 
 // esAdmin: rol_id === 1
@@ -77,6 +78,10 @@ const ExpedientesWrapper = ({ user }) => {
 const SidebarLayout = () => {
   const location = useLocation()
   const { user, logout } = useAuth()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  const toggleSidebar = () => setSidebarOpen(prev => !prev)
+  const closeSidebar = () => setSidebarOpen(false)
 
   // Determinar sección actual basada en la ruta
   const seccionActual = rutaASeccion[location.pathname] || 'dashboard'
@@ -94,17 +99,27 @@ const SidebarLayout = () => {
     logout()
   }
 
+  const isAdmin = esAdmin(user)
+
   return (
-    <div className="layout">
+    <div className={`layout ${isAdmin ? 'role-admin' : 'role-non-admin'}`}>
       <SyncIndicator />
+      {sidebarOpen && <div className="sidebar-backdrop" onClick={closeSidebar} />}
+
       <Sidebar
-        seccionActual={seccionActual}
         onLogout={handleLogout}
         menuItems={menuItems}
         titulos={titulos}
         usuario={user}
+        sidebarOpen={sidebarOpen}
+        onNavClick={closeSidebar}
       />
-      <Content titulo={titulos[seccionActual]}>
+      <Content
+        titulo={titulos[seccionActual]}
+        isAdmin={isAdmin}
+        sidebarOpen={sidebarOpen}
+        onToggleSidebar={toggleSidebar}
+      >
         <Routes>
           <Route index element={<Dashboard user={user} esAdmin={esAdmin(user)} />} />
           <Route path="usuarios" element={<UsuariosPanel />} />
@@ -124,6 +139,9 @@ const SidebarLayout = () => {
           <Route path="reportes" element={<Reportes />} />
         </Routes>
       </Content>
+
+      {/* Bottom navigation for non-admin mobile */}
+      {!isAdmin && <BottomBar titulos={titulos} onLogout={handleLogout} />}
     </div>
   )
 }

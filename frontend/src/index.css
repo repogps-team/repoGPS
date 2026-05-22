@@ -176,6 +176,152 @@ body {
 .content-header h1 { font-size: 1.8rem; color: var(--text-main); margin-bottom: 5px; }
 .content-header p { color: var(--text-muted); }
 
+/* === SIDEBAR BACKDROP === */
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99;
+  background: rgba(0, 0, 0, 0.5);
+  animation: sidebarFadeIn 0.3s ease forwards;
+}
+
+[data-theme='dark'] .sidebar-backdrop {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+@keyframes sidebarFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* === HAMBURGER IN CONTENT HEADER (admin mobile only) === */
+.content-header .hamburger {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text-main);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 4px;
+  margin-right: 8px;
+  border-radius: var(--radius-sm);
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  line-height: 1;
+  transition: background 0.2s;
+}
+.content-header .hamburger:hover {
+  background: var(--bg-panel);
+}
+
+/* === BOTTOM BAR (non-admin mobile only) === */
+
+/* === BOTTOM BAR (non-admin mobile only) === */
+.bottom-bar {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: #0f172a;
+  border-top: 1px solid #1e293b;
+  justify-content: space-around;
+  align-items: center;
+  padding: 6px 0 env(safe-area-inset-bottom, 6px) 0;
+  height: 64px;
+}
+
+.bottom-bar-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 12px;
+  color: #94a3b8;
+  text-decoration: none;
+  font-size: 0.65rem;
+  transition: color 0.2s;
+  min-width: 64px;
+}
+
+.bottom-bar-item.active {
+  color: var(--primary-color);
+}
+
+.bottom-bar-item svg {
+  width: 24px;
+  height: 24px;
+}
+
+.bottom-bar-label {
+  font-size: 0.65rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.bottom-bar-logout {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* === MOBILE: OVERRIDE SIDEBAR + SHOW FLOATING/BOTTOM === */
+@media (max-width: 768px) {
+  /* --- Admin: sidebar overlay + hamburger in header --- */
+  .layout.role-admin .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+
+  .layout.role-admin .sidebar.sidebar--open {
+    transform: translateX(0);
+  }
+
+  .layout.role-admin .content-header .hamburger {
+    display: inline-flex;
+    flex-shrink: 0;
+  }
+
+  .layout.role-admin .content-header h1 {
+    font-size: 1.3rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* --- Non-admin: hide sidebar, show bottom bar --- */
+  .layout.role-non-admin .sidebar {
+    display: none;
+  }
+
+  .layout.role-non-admin .bottom-bar {
+    display: flex;
+  }
+
+  .layout.role-non-admin .content {
+    padding-bottom: 80px;
+  }
+
+  .layout.role-non-admin .content-header h1 {
+    font-size: 1.3rem;
+  }
+}
+
+[data-theme='dark'] .bottom-bar {
+  background: #0f172a;
+  border-top-color: #1e293b;
+}
+
 .panel {
   background-color: var(--bg-panel);
   border-radius: var(--radius-md);
