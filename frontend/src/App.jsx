@@ -79,9 +79,11 @@ const SidebarLayout = () => {
   const location = useLocation()
   const { user, logout } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   const toggleSidebar = () => setSidebarOpen(prev => !prev)
   const closeSidebar = () => setSidebarOpen(false)
+  const toggleCollapse = () => setSidebarCollapsed(prev => !prev)
 
   // Determinar sección actual basada en la ruta
   const seccionActual = rutaASeccion[location.pathname] || 'dashboard'
@@ -113,6 +115,8 @@ const SidebarLayout = () => {
         usuario={user}
         sidebarOpen={sidebarOpen}
         onNavClick={closeSidebar}
+        sidebarCollapsed={sidebarCollapsed}
+        onToggleCollapse={toggleCollapse}
       />
       <Content
         titulo={titulos[seccionActual]}
