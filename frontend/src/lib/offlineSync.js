@@ -96,6 +96,13 @@ export async function processQueue() {
     }
   }
 
+  // Disparar evento global para que la UI se refresque
+  if (synced > 0 || failed > 0) {
+    window.dispatchEvent(new CustomEvent('repogps:sync-complete', {
+      detail: { synced, failed, errors }
+    }))
+  }
+
   return { synced, failed, errors }
 }
 

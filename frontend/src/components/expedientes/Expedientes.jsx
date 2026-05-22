@@ -19,7 +19,8 @@ const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicia
     cerrarDetalle,
     avanzarExpediente,
     devolverExpediente,
-    actualizarFechaTermino
+    actualizarFechaTermino,
+    refreshDocumentos
   } = useExpedientes()
   const { procesos, cargarProcesos } = useProcesos()
   const { cargarDisciplinas } = useDisciplinas()
@@ -36,6 +37,12 @@ const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicia
     fecha_termino: ''
   })
   const [etapasProceso, setEtapasProceso] = useState([])
+  const handleDocumentoUploaded = useCallback(() => {
+    if (expedienteDetalle?.id) {
+      refreshDocumentos(expedienteDetalle.id)
+    }
+  }, [expedienteDetalle, refreshDocumentos])
+
   const [filtroEstado, setFiltroEstado] = useState(filtroEstadoInicial)
   const [filtroSla, setFiltroSla] = useState(filtroSlaInicial)
   const [filtroProceso, setFiltroProceso] = useState('')
@@ -420,6 +427,7 @@ const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicia
           onCerrar={cerrarDetalle}
           onAvanzar={avanzarExpediente}
           onDevolver={devolverExpediente}
+          onDocumentoUploaded={handleDocumentoUploaded}
           onActualizarFechaTermino={async (id, fecha_termino) => {
             const updated = await actualizarFechaTermino(id, fecha_termino)
             if (updated) {

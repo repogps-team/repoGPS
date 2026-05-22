@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { UploadModal } from '../upload/UploadModal'
 import { DocumentTimeline } from '../upload/DocumentTimeline'
 import FormRenderer from '../forms/FormRenderer'
@@ -16,6 +16,19 @@ const ExpedienteDetalle = ({
   esAdmin = false
 }) => {
   const [showUploadModal, setShowUploadModal] = useState(false)
+  const { get } = useApi()
+
+  // Refrescar documentos cuando el sync offline completa
+  const handleSyncComplete = useCallback(() => {
+    if (onDocumentoUploaded) {
+      onDocumentoUploaded()
+    }
+  }, [onDocumentoUploaded])
+
+  useEffect(() => {
+    window.addEventListener('repogps:sync-complete', handleSyncComplete)
+    return () => window.removeEventListener('repogps:sync-complete', handleSyncComplete)
+  }, [handleSyncComplete])
   const [showNuevaVersionModal, setShowNuevaVersionModal] = useState(false)
   const [documentoParaNuevaVersion, setDocumentoParaNuevaVersion] = useState(null)
   const [expandedDocId, setExpandedDocId] = useState(null)
@@ -25,7 +38,6 @@ const ExpedienteDetalle = ({
   const [formToRespond, setFormToRespond] = useState(null) // { id, nombre, schema }
   const [formToRespondLoading, setFormToRespondLoading] = useState(false)
   const [viewingResponse, setViewingResponse] = useState(null)
-  const { get } = useApi()
 
   const handleAvanzar = async () => {
     const observacion = prompt('Observación (opcional):')

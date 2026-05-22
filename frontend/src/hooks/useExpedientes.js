@@ -84,6 +84,18 @@ export const useExpedientes = () => {
     return data
   }, [put])
 
+  const refreshDocumentos = useCallback(async (expedienteId) => {
+    if (!expedienteId) return
+    try {
+      const docData = await get(`/api/documentos/expediente/${expedienteId}`)
+      if (Array.isArray(docData)) {
+        setDocumentos(docData)
+      }
+    } catch {
+      // Silently fail — SW cache will serve if offline
+    }
+  }, [get])
+
   return {
     expedientes,
     expedienteDetalle,
@@ -96,7 +108,8 @@ export const useExpedientes = () => {
     abrirDetalle,
     cerrarDetalle,
     avanzarExpediente,
-    devolverExpediente
-    , actualizarFechaTermino
+    devolverExpediente,
+    actualizarFechaTermino,
+    refreshDocumentos
   }
 }
