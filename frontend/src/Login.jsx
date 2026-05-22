@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useAuth } from "./context/useAuth";
 import { useTheme } from "./context/useTheme";
 import "./login.css";
@@ -13,7 +13,16 @@ function Login() {
   const [loading, setLoading] = useState(false);
 
   const API_URL = import.meta.env.VITE_API_URL || "";
+  const PWA_URL = import.meta.env.VITE_PWA_URL || "https://repo-gps.vercel.app";
   const isDark = theme === 'dark'
+
+  // Detectar si es mobile (touch + userAgent) y NO está en Vercel
+  const mostrarPWA = useMemo(() => {
+    const isMobile = navigator.maxTouchPoints > 0 &&
+      /Mobi|Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    const isVercel = window.location.hostname.includes('vercel.app')
+    return isMobile && !isVercel
+  }, [])
 
   const ThemeToggle = () => (
     <button
@@ -103,6 +112,23 @@ function Login() {
               administrativo.
             </p>
           </div>
+
+          {mostrarPWA && (
+            <a
+              href={PWA_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-pwa"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="14" rx="2" ry="2"/>
+                <line x1="3" y1="21" x2="21" y2="21"/>
+                <polyline points="9 9 12 12 15 9"/>
+                <line x1="12" y1="12" x2="12" y2="3"/>
+              </svg>
+              Usar PWA 📱
+            </a>
+          )}
         </div>
 
         <div className="login-right">

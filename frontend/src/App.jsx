@@ -20,6 +20,7 @@ import FormBuilderPage from './components/forms/FormBuilder'
 import FormAssignment from './components/forms/FormAssignment'
 import FormResponses from './components/forms/FormResponses'
 import Reportes from './pages/Reportes'
+import SyncIndicator from './components/layout/SyncIndicator'
 
 // esAdmin: rol_id === 1
 const esAdmin = (user) => user?.rol_id === 1
@@ -87,6 +88,7 @@ const SidebarLayout = () => {
 
   return (
     <div className="layout">
+      <SyncIndicator />
       <Sidebar
         seccionActual={seccionActual}
         onLogout={handleLogout}

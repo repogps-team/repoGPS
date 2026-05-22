@@ -260,6 +260,45 @@
   font-size: 13px;
 }
 
+.btn-pwa {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 24px;
+  padding: 14px 24px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: white;
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.25s ease;
+  position: relative;
+  z-index: 1;
+  width: fit-content;
+}
+
+.btn-pwa:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.btn-pwa:active {
+  transform: translateY(0);
+}
+
+[data-theme='dark'] .btn-pwa {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+[data-theme='dark'] .btn-pwa:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
 @media (max-width: 900px) {
   .login-shell {
     grid-template-columns: 1fr;
