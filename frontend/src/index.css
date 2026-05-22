@@ -150,9 +150,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: none;
-  border: none;
-  color: #64748b;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
   cursor: pointer;
   width: 28px;
   height: 28px;
@@ -160,10 +160,13 @@ body {
   transition: all 0.2s;
   margin-left: auto;
   flex-shrink: 0;
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.12), inset 0 0 8px rgba(59, 130, 246, 0.04);
 }
 .sidebar-collapse-btn:hover {
-  background-color: #1e293b;
-  color: #e2e8f0;
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.4);
+  color: #bfdbfe;
+  box-shadow: 0 0 14px rgba(59, 130, 246, 0.25), inset 0 0 10px rgba(59, 130, 246, 0.08);
 }
 
 /* === SIDEBAR COLLAPSED === */
