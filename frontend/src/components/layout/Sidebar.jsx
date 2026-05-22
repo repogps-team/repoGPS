@@ -7,7 +7,7 @@ const Sidebar = ({ onLogout, menuItems = [], titulos = {}, usuario = {} }) => {
   const categoriasAdmin = {
     'Gestión': ['dashboard', 'usuarios', 'contratistas', 'areas', 'disciplinas'],
     'Motor de Procesos': ['procesos', 'etapas'],
-    'Expedientes': ['expedientes', 'categorias', 'formularios']
+    'Expedientes': ['expedientes', 'categorias', 'formularios', 'reportes']
   }
 
   // Categorías para el menú no-admin

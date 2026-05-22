@@ -19,6 +19,7 @@ import FormList from './components/forms/FormList'
 import FormBuilderPage from './components/forms/FormBuilder'
 import FormAssignment from './components/forms/FormAssignment'
 import FormResponses from './components/forms/FormResponses'
+import Reportes from './pages/Reportes'
 
 // esAdmin: rol_id === 1
 const esAdmin = (user) => user?.rol_id === 1
@@ -34,11 +35,12 @@ const titulos = {
   procesos: 'Procesos',
   etapas: 'Etapas',
   expedientes: 'Expedientes',
-  formularios: 'Formularios'
+  formularios: 'Formularios',
+  reportes: 'Reportes'
 }
 
 // Menús por rol
-const menuAdmin = ['dashboard', 'usuarios', 'contratistas', 'areas', 'disciplinas', 'categorias', 'procesos', 'etapas', 'expedientes', 'formularios']
+const menuAdmin = ['dashboard', 'usuarios', 'contratistas', 'areas', 'disciplinas', 'categorias', 'procesos', 'etapas', 'expedientes', 'formularios', 'reportes']
 const menuNoAdmin = ['dashboard', 'bandeja', 'expedientes']
 
 // Mapeo de rutas a secciones
@@ -53,7 +55,8 @@ const rutaASeccion = {
   '/etapas': 'etapas',
   '/expedientes': 'expedientes',
   '/bandeja': 'bandeja',
-  '/formularios': 'formularios'
+  '/formularios': 'formularios',
+  '/reportes': 'reportes'
 }
 
 // Wrapper para Expedientes que lee filtros de la URL
@@ -108,6 +111,7 @@ const SidebarLayout = () => {
           <Route path="formularios/:id/editar" element={<FormBuilderPage />} />
           <Route path="formularios/asignar" element={<FormAssignment />} />
           <Route path="formularios/:id/respuestas" element={<FormResponses />} />
+          <Route path="reportes" element={<Reportes />} />
         </Routes>
       </Content>
     </div>

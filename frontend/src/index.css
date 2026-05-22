@@ -1422,6 +1422,83 @@ button { font-family: inherit; }
   z-index: 1100;
 }
 
+/* === REPORTES === */
+.reportes-filters {
+  padding: 16px 25px;
+  background-color: var(--surface-alt);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.filter-row {
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 150px;
+  flex: 1;
+}
+
+.filter-field label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.filter-field select,
+.filter-field input {
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  background-color: white;
+  color: var(--text-main);
+}
+
+.filter-field select:focus,
+.filter-field input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.reportes-iframe-container {
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 280px);
+  min-height: 500px;
+  background-color: var(--bg-app);
+}
+
+.reportes-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* Dark mode overrides for reportes */
+[data-theme='dark'] .reportes-filters {
+  background-color: var(--surface-alt);
+}
+
+[data-theme='dark'] .filter-field select,
+[data-theme='dark'] .filter-field input {
+  background-color: var(--bg-panel);
+  border-color: var(--border-color);
+  color: var(--text-main);
+}
+
+[data-theme='dark'] .reportes-iframe-container {
+  background-color: var(--bg-app);
+}
+
 /* View Transition API animation */
 @supports (view-transition-name: none) {
   ::view-transition-old(root),
