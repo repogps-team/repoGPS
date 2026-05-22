@@ -4,13 +4,17 @@ import { useTheme } from "./context/useTheme";
 import "./login.css";
 
 function Login() {
-  const { login } = useAuth()
+  const { login, offlineLogin } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const [correo, setCorreo] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [mensajeInfo, setMensajeInfo] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const hayOffline = useMemo(() => {
+    return !navigator.onLine && localStorage.getItem('lastOfflineUser')
+  }, [])
 
   const API_URL = import.meta.env.VITE_API_URL || "";
   const PWA_URL = import.meta.env.VITE_PWA_URL || "https://repo-gps.vercel.app";
@@ -84,6 +88,9 @@ function Login() {
       login(data.token, data.usuario)
     } catch {
       setError("No se pudo conectar con el servidor");
+      if (hayOffline) {
+        setMensajeInfo("¿Querés continuar con los datos guardados sin conexión?")
+      }
     } finally {
       setLoading(false);
     }
@@ -172,6 +179,31 @@ function Login() {
               <button type="submit" disabled={loading}>
                 {loading ? "Iniciando..." : "Entrar"}
               </button>
+
+              {hayOffline && (
+                <button
+                  type="button"
+                  className="btn-offline"
+                  onClick={() => offlineLogin()}
+                  style={{
+                    width: '100%',
+                    marginTop: '8px',
+                    padding: '10px',
+                    background: 'transparent',
+                    border: '1px solid var(--border-color, #cbd5e1)',
+                    borderRadius: '6px',
+                    color: 'var(--text-main, #334155)',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                  }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ verticalAlign: 'middle', marginRight: '6px' }}>
+                    <path d="M12 2a10 10 0 1 0 10 10h-2a8 8 0 1 1-8-8V2z"/>
+                    <path d="M12 12V6m0 0L9 9m3-3l3 3"/>
+                  </svg>
+                  Continuar sin conexión
+                </button>
+              )}
           </form>
         </div>
       </div>
