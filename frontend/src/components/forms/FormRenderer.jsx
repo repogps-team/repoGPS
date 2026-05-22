@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useApi } from '../../hooks/useApi'
 import { formioEsTranslations } from '../../lib/formio-i18n-es'
+import { enqueue } from '../../lib/offlineQueue'
 
 // Safe schema parser — handles string, object, or null
 const parseSchema = (schema) => {
@@ -76,6 +77,26 @@ const FormRenderer = ({ formDefinition, expedienteId, onSubmitComplete, readOnly
 
         formioRef.current.on('submit', async (submission) => {
           if (!mounted || readOnly) return
+
+          // Offline: enqueue instead of posting
+          if (!navigator.onLine) {
+            try {
+              await enqueue({
+                type: 'form',
+                expediente_id: expedienteId,
+                url: `/api/forms/${formDefinition.id}/responder`,
+                method: 'POST',
+                body: { expediente_id: expedienteId, data: submission.data }
+              })
+              setMensaje('Formulario guardado sin conexión. Se sincronizará automáticamente cuando haya conexión.')
+              if (onSubmitComplete) {
+                onSubmitComplete()
+              }
+            } catch (err) {
+              setError('Error al guardar el formulario sin conexión: ' + err.message)
+            }
+            return
+          }
 
           setLoading(true)
           setError(null)

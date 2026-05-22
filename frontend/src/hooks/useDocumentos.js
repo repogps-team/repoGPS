@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useApi } from './useApi'
+import { enqueue } from '../lib/offlineQueue'
 
 export const useDocumentos = () => {
   const [versiones, setVersiones] = useState([])
@@ -18,6 +19,27 @@ export const useDocumentos = () => {
    * @returns {Promise<Object>} The uploaded document
    */
   const uploadDocumento = useCallback(async (expedienteId, file, descripcion = '', onProgress) => {
+    // Offline: enqueue instead of uploading
+    if (!navigator.onLine) {
+      try {
+        const arrayBuffer = await file.arrayBuffer()
+        await enqueue({
+          type: 'file',
+          expediente_id: expedienteId,
+          url: '/api/documentos/upload',
+          method: 'POST',
+          nombre: file.name,
+          archivo_blob: arrayBuffer,
+          mime_type: file.type,
+          body: descripcion ? { descripcion } : undefined
+        })
+        return { offline: true, nombre: file.name }
+      } catch (err) {
+        setError(err.message)
+        throw err
+      }
+    }
+
     setUploading(true)
     setUploadProgress(0)
     setError(null)
@@ -134,6 +156,27 @@ export const useDocumentos = () => {
     * @returns {Promise<Object>} The new version document
     */
   const crearVersion = useCallback(async (documentoId, file, descripcion = '', onProgress) => {
+    // Offline: enqueue instead of uploading
+    if (!navigator.onLine) {
+      try {
+        const arrayBuffer = await file.arrayBuffer()
+        await enqueue({
+          type: 'file',
+          expediente_id: documentoId,
+          url: `/api/documentos/${documentoId}/versiones`,
+          method: 'POST',
+          nombre: file.name,
+          archivo_blob: arrayBuffer,
+          mime_type: file.type,
+          body: descripcion ? { descripcion } : undefined
+        })
+        return { offline: true, nombre: file.name }
+      } catch (err) {
+        setError(err.message)
+        throw err
+      }
+    }
+
     setUploading(true)
     setUploadProgress(0)
     setError(null)
