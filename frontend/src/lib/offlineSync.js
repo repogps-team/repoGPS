@@ -4,16 +4,27 @@ const MAX_RETRIES = 3
 const API_BASE = import.meta.env.VITE_API_URL || ''
 
 /**
+ * Obtiene headers de autenticación desde localStorage
+ */
+function getAuthHeaders() {
+  const token = localStorage.getItem('token')
+  return token ? { 'Authorization': `Bearer ${token}` } : {}
+}
+
+/**
  * Procesa un item individual de la cola
  * @param {object} item
  * @returns {Promise<boolean>} true si se sincronizó ok
  */
 async function processItem(item) {
   try {
+    const authHeaders = getAuthHeaders()
+
     if (item.type === 'file') {
       // Subida de archivo: FormData con el blob
       const formData = new FormData()
       if (item.nombre) formData.append('archivo', new Blob([item.archivo_blob], { type: item.mime_type || 'application/octet-stream' }), item.nombre)
+      if (item.expediente_id) formData.append('expediente_id', String(item.expediente_id))
       if (item.body) {
         for (const [key, val] of Object.entries(item.body)) {
           formData.append(key, val)
@@ -22,6 +33,7 @@ async function processItem(item) {
 
       const res = await fetch(`${API_BASE}${item.url}`, {
         method: item.method,
+        headers: authHeaders,
         body: formData,
       })
 
@@ -35,7 +47,10 @@ async function processItem(item) {
       // Formulario: JSON
       const res = await fetch(`${API_BASE}${item.url}`, {
         method: item.method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders,
+        },
         body: JSON.stringify(item.body),
       })
 
