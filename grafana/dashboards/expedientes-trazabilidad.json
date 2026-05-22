@@ -1,0 +1,105 @@
+{
+  "uid": "expedientes-trazabilidad",
+  "title": "Reportes / Trazabilidad",
+  "tags": ["reportes", "trazabilidad"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-30d", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "contratista",
+        "label": "Contratista",
+        "type": "query",
+        "datasource": "Mantenedor DB",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": 0,
+        "multi": false,
+        "query": "SELECT id as __value, razon_social as __text FROM contratistas WHERE estado_activo = true ORDER BY razon_social",
+        "current": { "text": "All", "value": 0 }
+      },
+      {
+        "name": "area",
+        "label": "Área",
+        "type": "query",
+        "datasource": "Mantenedor DB",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": 0,
+        "multi": false,
+        "query": "SELECT id as __value, nombre as __text FROM areas WHERE estado_activo = true AND (${contratista} = 0 OR contratista_id = ${contratista}) ORDER BY nombre",
+        "current": { "text": "All", "value": 0 }
+      },
+      {
+        "name": "proceso",
+        "label": "Proceso",
+        "type": "query",
+        "datasource": "Expedientes DB",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": 0,
+        "multi": false,
+        "query": "SELECT id as __value, nombre as __text FROM procesos WHERE estado_activo = true AND (${area} = 0 OR area_id = ${area}) ORDER BY nombre",
+        "current": { "text": "All", "value": 0 }
+      },
+      {
+        "name": "fecha_desde",
+        "label": "Fecha Desde",
+        "type": "textbox",
+        "query": "",
+        "current": { "text": "", "value": "" }
+      },
+      {
+        "name": "fecha_hasta",
+        "label": "Fecha Hasta",
+        "type": "textbox",
+        "query": "",
+        "current": { "text": "", "value": "" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Cambios de Etapa por Día",
+      "datasource": "Expedientes DB",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT date_trunc('day', h.fecha_cambio) AS time, COUNT(*) AS value FROM historial_etapas h JOIN expedientes e ON h.expediente_id = e.id LEFT JOIN procesos p ON e.proceso_id = p.id WHERE e.estado_activo = true AND (${area} = 0 OR p.area_id = ${area}) AND (${proceso} = 0 OR e.proceso_id = ${proceso}) AND ('${fecha_desde}' = '' OR h.fecha_cambio::date >= '${fecha_desde}'::date) AND ('${fecha_hasta}' = '' OR h.fecha_cambio::date <= '${fecha_hasta}'::date) GROUP BY 1 ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "type": "barchart",
+      "title": "Expedientes por Usuario (Movimientos)",
+      "datasource": "Expedientes DB",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT h.usuario_id AS usuario_id, COUNT(*) AS total FROM historial_etapas h JOIN expedientes e ON h.expediente_id = e.id LEFT JOIN procesos p ON e.proceso_id = p.id WHERE e.estado_activo = true AND (${area} = 0 OR p.area_id = ${area}) AND (${proceso} = 0 OR e.proceso_id = ${proceso}) AND ('${fecha_desde}' = '' OR h.fecha_cambio::date >= '${fecha_desde}'::date) AND ('${fecha_hasta}' = '' OR h.fecha_cambio::date <= '${fecha_hasta}'::date) GROUP BY h.usuario_id ORDER BY total DESC"
+        }
+      ]
+    },
+    {
+      "type": "barchart",
+      "title": "Tiempo Total por Expediente (Top 10)",
+      "datasource": "Expedientes DB",
+      "gridPos": { "x": 0, "y": 8, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT e.titulo AS expediente, EXTRACT(EPOCH FROM (COALESCE(e.fecha_termino, now()) - e.fecha_creacion)) / 86400 AS dias FROM expedientes e LEFT JOIN procesos p ON e.proceso_id = p.id WHERE e.estado_activo = true AND (${area} = 0 OR p.area_id = ${area}) AND (${proceso} = 0 OR e.proceso_id = ${proceso}) AND ('${fecha_desde}' = '' OR e.fecha_creacion::date >= '${fecha_desde}'::date) AND ('${fecha_hasta}' = '' OR e.fecha_creacion::date <= '${fecha_hasta}'::date) ORDER BY dias DESC LIMIT 10"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,92 @@
+{
+  "uid": "expedientes-productividad",
+  "title": "Reportes / Productividad",
+  "tags": ["reportes", "productividad"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-30d", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "contratista",
+        "label": "Contratista",
+        "type": "query",
+        "datasource": "Mantenedor DB",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": 0,
+        "multi": false,
+        "query": "SELECT id as __value, razon_social as __text FROM contratistas WHERE estado_activo = true ORDER BY razon_social",
+        "current": { "text": "All", "value": 0 }
+      },
+      {
+        "name": "area",
+        "label": "Área",
+        "type": "query",
+        "datasource": "Mantenedor DB",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": 0,
+        "multi": false,
+        "query": "SELECT id as __value, nombre as __text FROM areas WHERE estado_activo = true AND (${contratista} = 0 OR contratista_id = ${contratista}) ORDER BY nombre",
+        "current": { "text": "All", "value": 0 }
+      },
+      {
+        "name": "proceso",
+        "label": "Proceso",
+        "type": "query",
+        "datasource": "Expedientes DB",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": 0,
+        "multi": false,
+        "query": "SELECT id as __value, nombre as __text FROM procesos WHERE estado_activo = true AND (${area} = 0 OR area_id = ${area}) ORDER BY nombre",
+        "current": { "text": "All", "value": 0 }
+      },
+      {
+        "name": "fecha_desde",
+        "label": "Fecha Desde",
+        "type": "textbox",
+        "query": "",
+        "current": { "text": "", "value": "" }
+      },
+      {
+        "name": "fecha_hasta",
+        "label": "Fecha Hasta",
+        "type": "textbox",
+        "query": "",
+        "current": { "text": "", "value": "" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "barchart",
+      "title": "Tareas por Usuario (Pendientes vs Completadas)",
+      "datasource": "Expedientes DB",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT ta.usuario_id AS usuario_id, COUNT(*) FILTER (WHERE ta.estado = 'pendiente') AS pendientes, COUNT(*) FILTER (WHERE ta.estado IN ('completada', 'visto')) AS completadas FROM tareas_asignadas ta LEFT JOIN expedientes e ON ta.expediente_id = e.id LEFT JOIN procesos p ON e.proceso_id = p.id WHERE e.estado_activo = true AND (${area} = 0 OR p.area_id = ${area}) AND (${proceso} = 0 OR e.proceso_id = ${proceso}) AND ('${fecha_desde}' = '' OR ta.fecha_asignacion::date >= '${fecha_desde}'::date) AND ('${fecha_hasta}' = '' OR ta.fecha_asignacion::date <= '${fecha_hasta}'::date) GROUP BY ta.usuario_id ORDER BY pendientes DESC"
+        }
+      ]
+    },
+    {
+      "type": "barchart",
+      "title": "Tiempo Promedio por Etapa (días)",
+      "datasource": "Expedientes DB",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT ep.nombre AS etapa, AVG(EXTRACT(EPOCH FROM (ta.fecha_termino - ta.fecha_asignacion)) / 86400) AS promedio_dias FROM tareas_asignadas ta JOIN etapas_proceso ep ON ta.etapa_id = ep.id LEFT JOIN expedientes e ON ta.expediente_id = e.id LEFT JOIN procesos p ON e.proceso_id = p.id WHERE ta.fecha_termino IS NOT NULL AND e.estado_activo = true AND (${area} = 0 OR p.area_id = ${area}) AND (${proceso} = 0 OR e.proceso_id = ${proceso}) AND ('${fecha_desde}' = '' OR ta.fecha_asignacion::date >= '${fecha_desde}'::date) AND ('${fecha_hasta}' = '' OR ta.fecha_asignacion::date <= '${fecha_hasta}'::date) GROUP BY ep.nombre ORDER BY promedio_dias DESC"
+        }
+      ]
+    }
+  ]
+}

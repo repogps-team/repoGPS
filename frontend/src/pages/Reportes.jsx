@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useAreas } from '../../hooks/useAreas'
-import { useProcesos } from '../../hooks/useProcesos'
+import { Navigate } from 'react-router-dom'
+import { useAuth } from '../context/useAuth'
+import { useAreas } from '../hooks/useAreas'
+import { useProcesos } from '../hooks/useProcesos'
 
 // UIDs de dashboards de Grafana (configurar después de crearlos en Grafana)
 const DASHBOARD_UIDS = {
@@ -18,6 +20,7 @@ const TABS = [
 ]
 
 export default function Reportes() {
+  const { user } = useAuth()
   const [activeTab, setActiveTab] = useState('general')
   const [iframeSrc, setIframeSrc] = useState('')
 
@@ -62,10 +65,6 @@ export default function Reportes() {
     setIframeSrc(buildIframeSrc())
   }, [buildIframeSrc])
 
-  const handleFilterChange = () => {
-    setIframeSrc(buildIframeSrc())
-  }
-
   const clearFilters = () => {
     setAreaId('')
     setContratistaId('')
@@ -75,6 +74,10 @@ export default function Reportes() {
   }
 
   const hasFilters = areaId || contratistaId || procesoId || fechaDesde || fechaHasta
+
+  if (!user || user.rol_id !== 1) {
+    return <Navigate to="/" replace />
+  }
 
   return (
     <div className="panel">
@@ -104,7 +107,7 @@ export default function Reportes() {
         <div className="filter-row">
           <div className="filter-field">
             <label>Área</label>
-            <select value={areaId} onChange={e => { setAreaId(e.target.value); handleFilterChange() }}>
+            <select value={areaId} onChange={e => setAreaId(e.target.value)}>
               <option value="">Todas</option>
               {areas.map(a => (
                 <option key={a.id} value={a.id}>{a.nombre}</option>
@@ -114,7 +117,7 @@ export default function Reportes() {
 
           <div className="filter-field">
             <label>Contratista</label>
-            <select value={contratistaId} onChange={e => { setContratistaId(e.target.value); handleFilterChange() }}>
+            <select value={contratistaId} onChange={e => setContratistaId(e.target.value)}>
               <option value="">Todos</option>
               {contratistas.map(c => (
                 <option key={c.id} value={c.id}>{c.razon_social}</option>
@@ -124,7 +127,7 @@ export default function Reportes() {
 
           <div className="filter-field">
             <label>Proceso</label>
-            <select value={procesoId} onChange={e => { setProcesoId(e.target.value); handleFilterChange() }}>
+            <select value={procesoId} onChange={e => setProcesoId(e.target.value)}>
               <option value="">Todos</option>
               {procesos.map(p => (
                 <option key={p.id} value={p.id}>{p.nombre}</option>
@@ -137,7 +140,7 @@ export default function Reportes() {
             <input
               type="date"
               value={fechaDesde}
-              onChange={e => { setFechaDesde(e.target.value); handleFilterChange() }}
+              onChange={e => setFechaDesde(e.target.value)}
             />
           </div>
 
@@ -146,7 +149,7 @@ export default function Reportes() {
             <input
               type="date"
               value={fechaHasta}
-              onChange={e => { setFechaHasta(e.target.value); handleFilterChange() }}
+              onChange={e => setFechaHasta(e.target.value)}
             />
           </div>
 

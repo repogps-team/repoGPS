@@ -1,0 +1,92 @@
+{
+  "uid": "expedientes-documentos",
+  "title": "Reportes / Documentos",
+  "tags": ["reportes", "documentos"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-30d", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "contratista",
+        "label": "Contratista",
+        "type": "query",
+        "datasource": "Mantenedor DB",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": 0,
+        "multi": false,
+        "query": "SELECT id as __value, razon_social as __text FROM contratistas WHERE estado_activo = true ORDER BY razon_social",
+        "current": { "text": "All", "value": 0 }
+      },
+      {
+        "name": "area",
+        "label": "Área",
+        "type": "query",
+        "datasource": "Mantenedor DB",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": 0,
+        "multi": false,
+        "query": "SELECT id as __value, nombre as __text FROM areas WHERE estado_activo = true AND (${contratista} = 0 OR contratista_id = ${contratista}) ORDER BY nombre",
+        "current": { "text": "All", "value": 0 }
+      },
+      {
+        "name": "proceso",
+        "label": "Proceso",
+        "type": "query",
+        "datasource": "Expedientes DB",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": 0,
+        "multi": false,
+        "query": "SELECT id as __value, nombre as __text FROM procesos WHERE estado_activo = true AND (${area} = 0 OR area_id = ${area}) ORDER BY nombre",
+        "current": { "text": "All", "value": 0 }
+      },
+      {
+        "name": "fecha_desde",
+        "label": "Fecha Desde",
+        "type": "textbox",
+        "query": "",
+        "current": { "text": "", "value": "" }
+      },
+      {
+        "name": "fecha_hasta",
+        "label": "Fecha Hasta",
+        "type": "textbox",
+        "query": "",
+        "current": { "text": "", "value": "" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "piechart",
+      "title": "Documentos por Categoría",
+      "datasource": "Expedientes DB",
+      "gridPos": { "x": 0, "y": 0, "w": 8, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT s.categoria_id AS categoria_id, COUNT(d.id) AS total FROM documentos d JOIN expedientes e ON d.expediente_id = e.id LEFT JOIN procesos p ON e.proceso_id = p.id LEFT JOIN subtipos s ON e.subtipo_id = s.id WHERE d.estado_activo = true AND e.estado_activo = true AND (${area} = 0 OR p.area_id = ${area}) AND (${proceso} = 0 OR e.proceso_id = ${proceso}) AND ('${fecha_desde}' = '' OR d.fecha_upload::date >= '${fecha_desde}'::date) AND ('${fecha_hasta}' = '' OR d.fecha_upload::date <= '${fecha_hasta}'::date) GROUP BY s.categoria_id ORDER BY total DESC"
+        }
+      ]
+    },
+    {
+      "type": "barchart",
+      "title": "Documentos por Expediente (Top 10)",
+      "datasource": "Expedientes DB",
+      "gridPos": { "x": 8, "y": 0, "w": 16, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT e.titulo AS expediente, COUNT(d.id) AS total FROM documentos d JOIN expedientes e ON d.expediente_id = e.id LEFT JOIN procesos p ON e.proceso_id = p.id WHERE d.estado_activo = true AND e.estado_activo = true AND (${area} = 0 OR p.area_id = ${area}) AND (${proceso} = 0 OR e.proceso_id = ${proceso}) AND ('${fecha_desde}' = '' OR d.fecha_upload::date >= '${fecha_desde}'::date) AND ('${fecha_hasta}' = '' OR d.fecha_upload::date <= '${fecha_hasta}'::date) GROUP BY e.titulo ORDER BY total DESC LIMIT 10"
+        }
+      ]
+    }
+  ]
+}

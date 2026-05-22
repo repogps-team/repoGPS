@@ -1,0 +1,118 @@
+{
+  "uid": "expedientes-general",
+  "title": "Reportes / Expedientes - General",
+  "tags": ["reportes", "expedientes", "general"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-30d", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "contratista",
+        "label": "Contratista",
+        "type": "query",
+        "datasource": "Mantenedor DB",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": 0,
+        "multi": false,
+        "query": "SELECT id as __value, razon_social as __text FROM contratistas WHERE estado_activo = true ORDER BY razon_social",
+        "current": { "text": "All", "value": 0 }
+      },
+      {
+        "name": "area",
+        "label": "Área",
+        "type": "query",
+        "datasource": "Mantenedor DB",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": 0,
+        "multi": false,
+        "query": "SELECT id as __value, nombre as __text FROM areas WHERE estado_activo = true AND (${contratista} = 0 OR contratista_id = ${contratista}) ORDER BY nombre",
+        "current": { "text": "All", "value": 0 }
+      },
+      {
+        "name": "proceso",
+        "label": "Proceso",
+        "type": "query",
+        "datasource": "Expedientes DB",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": 0,
+        "multi": false,
+        "query": "SELECT id as __value, nombre as __text FROM procesos WHERE estado_activo = true AND (${area} = 0 OR area_id = ${area}) ORDER BY nombre",
+        "current": { "text": "All", "value": 0 }
+      },
+      {
+        "name": "fecha_desde",
+        "label": "Fecha Desde",
+        "type": "textbox",
+        "query": "",
+        "current": { "text": "", "value": "" }
+      },
+      {
+        "name": "fecha_hasta",
+        "label": "Fecha Hasta",
+        "type": "textbox",
+        "query": "",
+        "current": { "text": "", "value": "" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "piechart",
+      "title": "Expedientes por Estado",
+      "datasource": "Expedientes DB",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 7 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT CASE WHEN ep.tipo_etapa = 'final' OR ep.es_final THEN 'Terminado' WHEN ep.tipo_etapa = 'desarrollo' THEN 'En Desarrollo' ELSE 'Pendiente' END AS estado, COUNT(*) AS total FROM expedientes e LEFT JOIN etapas_proceso ep ON e.etapa_actual_id = ep.id LEFT JOIN procesos p ON e.proceso_id = p.id WHERE e.estado_activo = true AND (${area} = 0 OR p.area_id = ${area}) AND (${proceso} = 0 OR e.proceso_id = ${proceso}) AND ('${fecha_desde}' = '' OR e.fecha_creacion::date >= '${fecha_desde}'::date) AND ('${fecha_hasta}' = '' OR e.fecha_creacion::date <= '${fecha_hasta}'::date) GROUP BY estado ORDER BY total DESC"
+        }
+      ]
+    },
+    {
+      "type": "piechart",
+      "title": "Expedientes por Área",
+      "datasource": "Expedientes DB",
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 7 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT p.area_id AS area_id, COUNT(*) AS total FROM expedientes e LEFT JOIN procesos p ON e.proceso_id = p.id WHERE e.estado_activo = true AND (${area} = 0 OR p.area_id = ${area}) AND (${proceso} = 0 OR e.proceso_id = ${proceso}) AND ('${fecha_desde}' = '' OR e.fecha_creacion::date >= '${fecha_desde}'::date) AND ('${fecha_hasta}' = '' OR e.fecha_creacion::date <= '${fecha_hasta}'::date) GROUP BY p.area_id ORDER BY total DESC"
+        }
+      ]
+    },
+    {
+      "type": "piechart",
+      "title": "Expedientes por Proceso",
+      "datasource": "Expedientes DB",
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 7 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT p.nombre AS proceso, COUNT(*) AS total FROM expedientes e LEFT JOIN procesos p ON e.proceso_id = p.id WHERE e.estado_activo = true AND (${area} = 0 OR p.area_id = ${area}) AND (${proceso} = 0 OR e.proceso_id = ${proceso}) AND ('${fecha_desde}' = '' OR e.fecha_creacion::date >= '${fecha_desde}'::date) AND ('${fecha_hasta}' = '' OR e.fecha_creacion::date <= '${fecha_hasta}'::date) GROUP BY p.nombre ORDER BY total DESC"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Timeline de Expedientes (por mes)",
+      "datasource": "Expedientes DB",
+      "gridPos": { "x": 0, "y": 7, "w": 18, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT date_trunc('month', e.fecha_creacion) AS time, COUNT(*) AS value FROM expedientes e LEFT JOIN procesos p ON e.proceso_id = p.id WHERE e.estado_activo = true AND (${area} = 0 OR p.area_id = ${area}) AND (${proceso} = 0 OR e.proceso_id = ${proceso}) AND ('${fecha_desde}' = '' OR e.fecha_creacion::date >= '${fecha_desde}'::date) AND ('${fecha_hasta}' = '' OR e.fecha_creacion::date <= '${fecha_hasta}'::date) GROUP BY 1 ORDER BY 1"
+        }
+      ]
+    }
+  ]
+}
