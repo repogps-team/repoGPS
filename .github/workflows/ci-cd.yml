@@ -10,7 +10,7 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  REPO_LOWER: katalina-star/repogps
+  REPO_LOWER: repogps-team/repogps
 
 jobs:
   # ==========================================
