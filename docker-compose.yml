@@ -53,7 +53,7 @@ services:
   # Microservicio Usuarios
   # ============================================
   ms-usuarios:
-    image: ghcr.io/katalina-star/repogps/repogps-ms-usuarios:latest
+    image: ghcr.io/repogps-team/repogps/repogps-ms-usuarios:latest
     container_name: ms-usuarios
     environment:
       - NODE_OPTIONS=--max-old-space-size=256
@@ -74,7 +74,7 @@ services:
   # Microservicio Mantenedor
   # ============================================
   ms-mantenedor:
-    image: ghcr.io/katalina-star/repogps/repogps-ms-mantenedor:latest
+    image: ghcr.io/repogps-team/repogps/repogps-ms-mantenedor:latest
     container_name: ms-mantenedor
     environment:
       - DB_USER=postgres
@@ -110,7 +110,7 @@ services:
   # Microservicio Expedientes
   # ============================================
   ms-expedientes:
-    image: ghcr.io/katalina-star/repogps/repogps-ms-expedientes:latest
+    image: ghcr.io/repogps-team/repogps/repogps-ms-expedientes:latest
     container_name: ms-expedientes
     expose:
       - "3002"
@@ -137,7 +137,7 @@ services:
   # Frontend
   # ============================================
   frontend:
-    image: ghcr.io/katalina-star/repogps/repogps-frontend:latest
+    image: ghcr.io/repogps-team/repogps/repogps-frontend:latest
     container_name: frontend-ui
     environment:
       - VITE_API_USUARIOS_URL=http://nginx:80
