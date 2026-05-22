@@ -35,7 +35,7 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,ico,json}'],
         runtimeCaching: [
           {
-            urlPattern: /^\/api\/.*/i,
+            urlPattern: /\/api\//i,
             handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'api-cache',
