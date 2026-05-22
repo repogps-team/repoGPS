@@ -1475,12 +1475,14 @@ button { font-family: inherit; }
   height: calc(100vh - 280px);
   min-height: 500px;
   background-color: var(--bg-app);
+  overflow: hidden;
 }
 
 .reportes-iframe {
   width: 100%;
-  height: 100%;
+  height: calc(100% + 56px);
   border: none;
+  margin-top: -56px;
 }
 
 /* Dark mode overrides for reportes */

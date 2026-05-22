@@ -47,7 +47,6 @@ export default function Reportes() {
     const params = new URLSearchParams({
       orgId: '1',
       kiosk: 'tv',
-      fullscreen: '1',
       refresh: '30s',
     })
 
