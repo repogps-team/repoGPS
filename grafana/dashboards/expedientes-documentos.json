@@ -13,24 +13,24 @@
         "name": "contratista",
         "label": "Contratista",
         "type": "query",
-        "datasource": "Mantenedor DB",
+        "datasource": "Expedientes DB",
         "refresh": 2,
         "includeAll": true,
         "allValue": 0,
         "multi": false,
-        "query": "SELECT id as __value, razon_social as __text FROM contratistas WHERE estado_activo = true ORDER BY razon_social",
+        "query": "SELECT id as __value, razon_social as __text FROM contratistas_mirror WHERE estado_activo = true ORDER BY razon_social",
         "current": { "text": "All", "value": 0 }
       },
       {
         "name": "area",
         "label": "Área",
         "type": "query",
-        "datasource": "Mantenedor DB",
+        "datasource": "Expedientes DB",
         "refresh": 2,
         "includeAll": true,
         "allValue": 0,
         "multi": false,
-        "query": "SELECT id as __value, nombre as __text FROM areas WHERE estado_activo = true AND (${contratista} = 0 OR contratista_id = ${contratista}) ORDER BY nombre",
+        "query": "SELECT id as __value, nombre as __text FROM areas_mirror WHERE estado_activo = true AND (${contratista} = 0 OR contratista_id = ${contratista}) ORDER BY nombre",
         "current": { "text": "All", "value": 0 }
       },
       {
@@ -71,7 +71,7 @@
         {
           "refId": "A",
           "format": "table",
-          "rawSql": "SELECT s.categoria_id AS categoria_id, COUNT(d.id) AS total FROM documentos d JOIN expedientes e ON d.expediente_id = e.id LEFT JOIN procesos p ON e.proceso_id = p.id LEFT JOIN subtipos s ON e.subtipo_id = s.id WHERE d.estado_activo = true AND e.estado_activo = true AND (${area} = 0 OR p.area_id = ${area}) AND (${proceso} = 0 OR e.proceso_id = ${proceso}) AND ('${fecha_desde}' = '' OR d.fecha_upload::date >= '${fecha_desde}'::date) AND ('${fecha_hasta}' = '' OR d.fecha_upload::date <= '${fecha_hasta}'::date) GROUP BY s.categoria_id ORDER BY total DESC"
+          "rawSql": "SELECT cm.nombre AS categoria, COUNT(d.id) AS total FROM documentos d JOIN expedientes e ON d.expediente_id = e.id LEFT JOIN procesos p ON e.proceso_id = p.id LEFT JOIN subtipos_mirror sm ON e.subtipo_id = sm.id LEFT JOIN categorias_mirror cm ON sm.categoria_id = cm.id WHERE d.estado_activo = true AND e.estado_activo = true AND (${area} = 0 OR p.area_id = ${area}) AND (${proceso} = 0 OR e.proceso_id = ${proceso}) AND ('${fecha_desde}' = '' OR d.fecha_upload::date >= '${fecha_desde}'::date) AND ('${fecha_hasta}' = '' OR d.fecha_upload::date <= '${fecha_hasta}'::date) GROUP BY cm.nombre ORDER BY total DESC"
         }
       ]
     },

@@ -146,6 +146,103 @@ async function getTareasEtapaColumn() {
   return TAREAS_ETAPA_COLUMN || "etapa_id";
 }
 
+// =====================================================
+// Mirror sync helpers (mantenedor -> expedientes)
+// =====================================================
+async function syncMirrorTable(client, tableName, rows, columns) {
+  if (!rows || rows.length === 0) return;
+
+  const colNames = columns.join(", ");
+  const insertCols = `${colNames}, fecha_sync`;
+
+  const values = [];
+  const placeholders = rows.map((row, rowIndex) => {
+    const baseIndex = rowIndex * (columns.length + 1);
+    columns.forEach((col, colIndex) => {
+      values.push(row[col] ?? null);
+    });
+    values.push(new Date());
+
+    const rowPlaceholders = columns.map((_, colIndex) => `$${baseIndex + colIndex + 1}`);
+    rowPlaceholders.push(`$${baseIndex + columns.length + 1}`);
+    return `(${rowPlaceholders.join(", ")})`;
+  });
+
+  const updates = columns.map(col => `${col} = EXCLUDED.${col}`).join(", ");
+
+  const query = `
+    INSERT INTO ${tableName} (${insertCols})
+    VALUES ${placeholders.join(", ")}
+    ON CONFLICT (id) DO UPDATE SET
+      ${updates},
+      fecha_sync = EXCLUDED.fecha_sync
+  `;
+
+  await client.query(query, values);
+}
+
+async function syncMantenedorMirror() {
+  const [contratistasRes, areasRes, disciplinasRes, categoriasRes, subtiposRes] = await Promise.all([
+    fetch(`${MS_MANTENEDOR_URL}/api/contratistas`),
+    fetch(`${MS_MANTENEDOR_URL}/api/areas`),
+    fetch(`${MS_MANTENEDOR_URL}/api/disciplinas`),
+    fetch(`${MS_MANTENEDOR_URL}/api/categorias`),
+    fetch(`${MS_MANTENEDOR_URL}/api/subtipos`)
+  ]);
+
+  if (!contratistasRes.ok || !areasRes.ok || !disciplinasRes.ok || !categoriasRes.ok || !subtiposRes.ok) {
+    throw new Error("No se pudo obtener datos de mantenedor");
+  }
+
+  const [contratistas, areas, disciplinas, categorias, subtipos] = await Promise.all([
+    contratistasRes.json(),
+    areasRes.json(),
+    disciplinasRes.json(),
+    categoriasRes.json(),
+    subtiposRes.json()
+  ]);
+
+  const usuariosRes = await fetch(`${MS_USUARIOS_URL}/api/usuarios`);
+  if (!usuariosRes.ok) {
+    throw new Error("No se pudo obtener usuarios");
+  }
+  const usuarios = await usuariosRes.json();
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    await syncMirrorTable(client, "contratistas_mirror", contratistas, ["id", "razon_social", "rut", "estado_activo"]);
+    await syncMirrorTable(client, "areas_mirror", areas, ["id", "contratista_id", "nombre", "estado_activo"]);
+    await syncMirrorTable(client, "disciplinas_mirror", disciplinas, ["id", "area_id", "nombre", "estado_activo"]);
+    await syncMirrorTable(client, "categorias_mirror", categorias, ["id", "nombre", "descripcion", "estado_activo"]);
+    await syncMirrorTable(client, "subtipos_mirror", subtipos, ["id", "categoria_id", "nombre", "descripcion", "estado_activo"]);
+    await syncMirrorTable(client, "usuarios_mirror", usuarios, ["id", "rol_id", "nombre_completo", "correo", "estado_activo"]);
+
+    await client.query("COMMIT");
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+let mirrorSyncInProgress = false;
+
+async function runMirrorSync() {
+  if (mirrorSyncInProgress) return;
+  mirrorSyncInProgress = true;
+  try {
+    await syncMantenedorMirror();
+    console.log("[mirror-sync] Sync completada");
+  } catch (err) {
+    console.warn(`[mirror-sync] Error: ${err.message}`);
+  } finally {
+    mirrorSyncInProgress = false;
+  }
+}
+
 function isMissingColumnError(err, colName) {
   const msg = (err && err.message) || "";
   return msg.includes(`column t.${colName} does not exist`) || msg.includes(`column ${colName} does not exist`);
@@ -742,6 +839,27 @@ app.patch("/api/etapas-proceso/:id/estado", async (req, res) => {
       return res.status(404).json({ error: "Etapa no encontrada" });
     }
     res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Ejecutar sync inicial a los 30s (para esperar DB + ms-mantenedor)
+setTimeout(runMirrorSync, 30000);
+// Reintentar cada 5 minutos para reflejar nuevas áreas/categorías
+setInterval(runMirrorSync, 5 * 60 * 1000);
+
+// ============================================
+// MIRROR SYNC (Mantenedor -> Expedientes)
+// ============================================
+app.post("/api/mantenedor/sync", authMiddleware, async (req, res) => {
+  if (!req.user.esAdmin) {
+    return res.status(403).json({ error: "Solo administradores pueden sincronizar" });
+  }
+
+  try {
+    await syncMantenedorMirror();
+    res.json({ message: "Sync completada" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
