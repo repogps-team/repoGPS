@@ -21,6 +21,7 @@ import FormAssignment from './components/forms/FormAssignment'
 import FormResponses from './components/forms/FormResponses'
 import Reportes from './pages/Reportes'
 import SyncIndicator from './components/layout/SyncIndicator'
+import { warmupCache } from './lib/cacheWarmup'
 
 // esAdmin: rol_id === 1
 const esAdmin = (user) => user?.rol_id === 1
@@ -81,6 +82,13 @@ const SidebarLayout = () => {
   const seccionActual = rutaASeccion[location.pathname] || 'dashboard'
 
   const menuItems = esAdmin(user) ? menuAdmin : menuNoAdmin
+
+  // Precargar cache del SW con todos los endpoints al iniciar sesión
+  useEffect(() => {
+    if (user) {
+      warmupCache(esAdmin(user))
+    }
+  }, [user])
 
   const handleLogout = () => {
     logout()
