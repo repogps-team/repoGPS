@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { UploadModal } from '../upload/UploadModal'
 import { DocumentTimeline } from '../upload/DocumentTimeline'
 import FormRenderer from '../forms/FormRenderer'
@@ -16,6 +17,7 @@ const ExpedienteDetalle = ({
   esAdmin = false
 }) => {
   const [showUploadModal, setShowUploadModal] = useState(false)
+  const navigate = useNavigate()
   const { get } = useApi()
 
   // Refrescar documentos cuando el sync offline completa
@@ -35,8 +37,6 @@ const ExpedienteDetalle = ({
   const [formulariosAsignados, setFormulariosAsignados] = useState([])
   const [expandedFormId, setExpandedFormId] = useState(null)
   const [expandedFormDetail, setExpandedFormDetail] = useState(null) // schema + respuestas completas
-  const [formToRespond, setFormToRespond] = useState(null) // { id, nombre, schema }
-  const [formToRespondLoading, setFormToRespondLoading] = useState(false)
   const [viewingResponse, setViewingResponse] = useState(null)
 
   const handleAvanzar = async () => {
@@ -79,18 +79,6 @@ const ExpedienteDetalle = ({
     }
   }, [expediente?.id, get])
 
-  const handleFormResponseSubmitted = async () => {
-    setFormToRespond(null)
-    try {
-      const data = await get(`/api/forms/expediente/${expediente.id}`)
-      if (Array.isArray(data)) {
-        setFormulariosAsignados(data)
-      }
-    } catch (err) {
-      console.error('Error al refrescar formularios:', err)
-    }
-  }
-
   const handleExpandForm = async (form) => {
     if (expandedFormId === form.id) {
       setExpandedFormId(null)
@@ -116,17 +104,8 @@ const ExpedienteDetalle = ({
     }
   }
 
-  const handleStartRespond = async (form) => {
-    setFormToRespondLoading(true)
-    try {
-      const formDef = await get(`/api/forms/${form.id}`)
-      setFormToRespond({ id: formDef.id, nombre: formDef.nombre, schema: formDef.schema })
-    } catch (err) {
-      console.error('Error al cargar formulario:', err)
-      alert('Error al cargar el formulario')
-    } finally {
-      setFormToRespondLoading(false)
-    }
+  const handleStartRespond = (form) => {
+    navigate(`/expedientes/${expediente.id}/responder/${form.id}`)
   }
 
   if (!expediente) return null
@@ -333,9 +312,8 @@ const ExpedienteDetalle = ({
                                 <button
                                   className="btn-mini btn-edit"
                                   onClick={() => handleStartRespond(f)}
-                                  disabled={formToRespondLoading}
                                 >
-                                  {formToRespondLoading ? 'Cargando...' : 'Responder'}
+                                  Responder
                                 </button>
                               ) : (
                                 <span className="role-tag">Solo lectura</span>
@@ -382,19 +360,6 @@ const ExpedienteDetalle = ({
                       ))}
                     </tbody>
                   </table>
-                  {formToRespond && (
-                    <div style={{ marginTop: '12px', padding: '12px', border: '1px solid var(--border-color, #ddd)', borderRadius: '4px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                        <h4 style={{ margin: 0 }}>Responder: {formToRespond.nombre}</h4>
-                        <button className="btn btn-secondary" onClick={() => setFormToRespond(null)}>Cancelar</button>
-                      </div>
-                      <FormRenderer
-                        formDefinition={formToRespond}
-                        expedienteId={expediente.id}
-                        onSubmitComplete={handleFormResponseSubmitted}
-                      />
-                    </div>
-                  )}
                 </>
               ) : <p className="empty-text">Sin formularios asignados</p>}
             </div>
