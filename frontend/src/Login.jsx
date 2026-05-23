@@ -20,10 +20,22 @@ function Login() {
   const PWA_URL = import.meta.env.VITE_PWA_URL || "https://repo-gps.vercel.app";
   const isDark = theme === 'dark'
 
-  // Mostrar botón para ir a la PWA en Vercel, solo cuando NO estamos ya en Vercel
-  const mostrarPWA = useMemo(() => {
-    return !window.location.hostname.includes('vercel.app')
-  }, [])
+  // Detect deployment context
+  const esPacheco = !window.location.hostname.includes('vercel.app')
+  const esVercel = !esPacheco
+  const isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+  const [redirecting, setRedirecting] = useState(false)
+
+  // On pacheco + mobile → auto-redirect to PWA on Vercel
+  useEffect(() => {
+    if (esPacheco && isMobile) {
+      setRedirecting(true)
+      const timer = setTimeout(() => {
+        window.location.href = PWA_URL
+      }, 2500)
+      return () => clearTimeout(timer)
+    }
+  }, [esPacheco, isMobile, PWA_URL])
 
   const ThemeToggle = () => (
     <button
@@ -82,6 +94,12 @@ function Login() {
         return;
       }
 
+      // En la PWA (Vercel) solo usuarios no-admin pueden acceder
+      if (esVercel && data.usuario?.rol_id === 1) {
+        setError("La versión PWA es solo para usuarios no administradores. Accede desde el escritorio.");
+        return;
+      }
+
       login(data.token, data.usuario)
     } catch {
       setError("No se pudo conectar con el servidor");
@@ -117,7 +135,12 @@ function Login() {
             </p>
           </div>
 
-          {mostrarPWA && (
+          {redirecting ? (
+            <div className="pwa-redirecting">
+              <div className="pwa-redirecting-spinner"></div>
+              <p>Redirigiendo a la versión móvil...</p>
+            </div>
+          ) : esPacheco && !isMobile && (
             <a
               href={PWA_URL}
               target="_blank"

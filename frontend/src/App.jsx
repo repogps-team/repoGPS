@@ -86,10 +86,14 @@ const SidebarLayout = () => {
   const closeSidebar = () => setSidebarOpen(false)
   const toggleCollapse = () => setSidebarCollapsed(prev => !prev)
 
-  // Determinar sección actual basada en la ruta
-  const seccionActual = rutaASeccion[location.pathname] || 'dashboard'
-
-  const menuItems = esAdmin(user) ? menuAdmin : menuNoAdmin
+  // En la PWA (Vercel) solo usuarios no-admin
+  useEffect(() => {
+    const esVercel = window.location.hostname.includes('vercel.app')
+    if (esVercel && user?.rol_id === 1) {
+      localStorage.setItem('logout_message', 'La versión PWA es solo para usuarios no administradores.')
+      logout()
+    }
+  }, [user, logout])
 
   // Precargar cache del SW con todos los endpoints al iniciar sesión
   useEffect(() => {
@@ -97,6 +101,11 @@ const SidebarLayout = () => {
       warmupCache(esAdmin(user))
     }
   }, [user])
+
+  // Determinar sección actual basada en la ruta
+  const seccionActual = rutaASeccion[location.pathname] || 'dashboard'
+
+  const menuItems = esAdmin(user) ? menuAdmin : menuNoAdmin
 
   const handleLogout = () => {
     logout()
