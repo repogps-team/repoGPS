@@ -845,9 +845,11 @@ app.patch("/api/etapas-proceso/:id/estado", async (req, res) => {
 });
 
 // Ejecutar sync inicial a los 30s (para esperar DB + ms-mantenedor)
-setTimeout(runMirrorSync, 30000);
-// Reintentar cada 5 minutos para reflejar nuevas áreas/categorías
-setInterval(runMirrorSync, 5 * 60 * 1000);
+if (process.env.NODE_ENV !== 'test') {
+  setTimeout(runMirrorSync, 30000);
+  // Reintentar cada 5 minutos para reflejar nuevas áreas/categorías
+  setInterval(runMirrorSync, 5 * 60 * 1000);
+}
 
 // ============================================
 // MIRROR SYNC (Mantenedor -> Expedientes)
@@ -2043,8 +2045,26 @@ app.use(formRoutes(pool, authMiddleware, MS_USUARIOS_URL));
 
 // Servidor
 const PORT = process.env.PORT || 3002;
-resolveTareasEtapaColumn().finally(() => {
-  app.listen(PORT, () => {
-    console.log(`Servidor ms-expedientes corriendo en el puerto ${PORT}`);
+
+if (process.env.NODE_ENV !== 'test') {
+  resolveTareasEtapaColumn().finally(() => {
+    app.listen(PORT, () => {
+      console.log(`Servidor ms-expedientes corriendo en el puerto ${PORT}`);
+    });
   });
-});
+}
+
+module.exports = app;
+
+// Export internal functions for unit testing
+module.exports.__unit = {
+  isAllowedFile,
+  normalizarTipoTarea,
+  normalizarTipoEtapa,
+  validarReglasEtapa,
+  isMissingColumnError,
+  TIPOS_TAREA_VALIDOS,
+  TIPOS_ETAPA_VALIDOS,
+  ALLOWED_EXTENSIONS,
+  ALLOWED_MIME_TYPES,
+};

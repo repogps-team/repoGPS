@@ -64,7 +64,12 @@ jobs:
       # Backend ms-expedientes
       - name: Instalar Backend Expedientes
         working-directory: ./backend/ms-expedientes
-        run: npm install
+        run: npm ci
+      
+      # Tests ms-expedientes
+      - name: Tests Backend Expedientes
+        working-directory: ./backend/ms-expedientes
+        run: npm test
 
   # ==========================================
   # FASE 2: LA FÁBRICA (Construir Imágenes en GitHub)
