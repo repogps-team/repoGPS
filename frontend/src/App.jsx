@@ -20,6 +20,7 @@ import FormBuilderPage from './components/forms/FormBuilder'
 import FormAssignment from './components/forms/FormAssignment'
 import FormResponses from './components/forms/FormResponses'
 import Reportes from './pages/Reportes'
+import FormResponderPage from './pages/FormResponderPage'
 import SyncIndicator from './components/layout/SyncIndicator'
 import BottomBar from './components/layout/BottomBar'
 import { warmupCache } from './lib/cacheWarmup'
@@ -134,6 +135,7 @@ const SidebarLayout = () => {
           <Route path="procesos" element={<ProcesosPanel />} />
           <Route path="etapas" element={<EtapasPanel />} />
           <Route path="expedientes" element={<ExpedientesWrapper user={user} />} />
+          <Route path="expedientes/:expedienteId/responder/:formId" element={<FormResponderPage />} />
           <Route path="bandeja" element={<BandejaTareas user={user} />} />
           <Route path="formularios" element={<FormList />} />
           <Route path="formularios/crear" element={<FormBuilderPage />} />
