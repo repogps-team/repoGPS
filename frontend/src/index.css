@@ -93,14 +93,15 @@ body {
 .brand-mark {
   background-color: var(--primary-color);
   color: white;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: bold;
   font-size: 1.2rem;
+  flex-shrink: 0;
 }
 
 .brand h2 { font-size: 1.1rem; margin-bottom: 2px; }
@@ -154,8 +155,8 @@ body {
   border: 1px solid rgba(59, 130, 246, 0.2);
   color: #93c5fd;
   cursor: pointer;
-  width: 28px;
-  height: 28px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--radius-sm);
   transition: all 0.2s;
   margin-left: auto;
@@ -187,17 +188,11 @@ body {
 }
 
 .sidebar--collapsed .brand-mark {
-  width: 44px;
-  height: 44px;
   font-size: 1.1rem;
-  flex-shrink: 0;
 }
 
 .sidebar--collapsed .sidebar-collapse-btn {
   margin-left: 0;
-  width: 44px;
-  height: 44px;
-  border-radius: var(--radius-sm);
 }
 
 .sidebar--collapsed .sidebar-nav {
