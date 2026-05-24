@@ -2066,10 +2066,12 @@ app.patch("/api/tareas/:id", async (req, res) => {
       return res.status(400).json({ error: "La tarea ya fue cerrada" });
     }
 
+    // NOTA: estado ya fue validado como 'completada'|'rechazada' arriba (linea ~2043)
+    // por eso fecha_termino se setea siempre a CURRENT_TIMESTAMP
     const result = await pool.query(`
       UPDATE tareas_asignadas 
       SET estado = $1, 
-          fecha_termino = CASE WHEN $1 IN ('completada', 'rechazada') THEN CURRENT_TIMESTAMP ELSE fecha_termino END,
+          fecha_termino = CURRENT_TIMESTAMP,
           observacion = COALESCE($2, observacion)
       WHERE id = $3 
       RETURNING *
