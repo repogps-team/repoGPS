@@ -1060,51 +1060,12 @@ app.post("/api/expedientes/:id/avanzar", authMiddleware, async (req, res) => {
     if (expResult.rows.length === 0) {
       return res.status(404).json({ error: "Expediente no encontrado" });
     }
-    const expediente = expResult.rows[0];
 
-    // Obtener siguiente etapa
-    const etapaResult = await pool.query(
-      "SELECT * FROM etapas_proceso WHERE proceso_id = $1 AND orden > (SELECT orden FROM etapas_proceso WHERE id = $2) ORDER BY orden ASC LIMIT 1",
-      [expediente.proceso_id, expediente.etapa_actual_id]
-    );
-
-    if (etapaResult.rows.length === 0) {
-      return res.status(400).json({ error: "No hay mas etapas para avanzar" });
-    }
-
-    const nuevaEtapa = etapaResult.rows[0];
-
-    // HU-21: Verificar que el rol tiene permiso para esta transicion
-    if (!esAdmin) {
-      const permiso = await pool.query(
-        `SELECT 1 FROM transiciones_permitidas
-         WHERE proceso_id = $1
-           AND etapa_from_id = $2
-           AND etapa_to_id = $3
-           AND rol_id = $4`,
-        [expediente.proceso_id, expediente.etapa_actual_id, nuevaEtapa.id, rol_id]
-      );
-      if (permiso.rows.length === 0) {
-        return res.status(403).json({ error: "Tu rol no tiene permiso para ejecutar esta transicion" });
-      }
-    }
-
-    // Actualizar expediente
-    await pool.query(
-      "UPDATE expedientes SET etapa_actual_id = $1, fecha_actualizacion = CURRENT_TIMESTAMP WHERE id = $2",
-      [nuevaEtapa.id, id]
-    );
-
-    // Registrar en historial
-    await pool.query(
-      "INSERT INTO historial_etapas (expediente_id, etapa_anterior_id, etapa_nueva_id, usuario_id, observacion) VALUES ($1, $2, $3, $4, $5)",
-      [id, expediente.etapa_actual_id, nuevaEtapa.id, usuario_id, observacion || "Avance automático"]
-    );
-
-    // Generar tareas automaticamente para la nueva etapa
-    if (nuevaEtapa.tipo_tarea && nuevaEtapa.rol_id) {
-      await generarTareasPorEtapa(id, nuevaEtapa.id, pool);
-    }
+    const avanzarResult = await internalAvanzarExpediente(id, usuario_id, observacion, pool, {
+      skipPermisos: esAdmin,
+      rolId: rol_id,
+      expediente: expResult.rows[0] // ya lo consultamos para verificar área
+    });
 
     const updated = await pool.query(`
       SELECT e.*, p.nombre AS proceso_nombre, p.area_id, ep.nombre AS etapa_actual, ep.es_final, ep.tipo_etapa
@@ -1126,9 +1087,10 @@ app.post("/api/expedientes/:id/avanzar", authMiddleware, async (req, res) => {
       }
     }
 
-    res.json({ message: "Expediente avanzado", nueva_etapa: nuevaEtapa, expediente: { ...exp, estado } });
+    res.json({ message: "Expediente avanzado", nueva_etapa: avanzarResult.nueva_etapa, expediente: { ...exp, estado } });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    const statusCode = err.statusCode || 500;
+    res.status(statusCode).json({ error: err.message });
   }
 });
 
@@ -1284,6 +1246,63 @@ async function internalRechazarExpediente(expedienteId, usuarioId, observacion, 
   );
 
   return { exito: true, nueva_etapa: rechazadoEtapa };
+}
+
+// Avanzar expediente a siguiente etapa (función compartida)
+async function internalAvanzarExpediente(expedienteId, usuarioId, observacion, pool, options = {}) {
+  const { skipPermisos = false, rolId = null, expediente: expedienteArg = null } = options;
+
+  let expediente = expedienteArg;
+  if (!expediente) {
+    const expResult = await pool.query(
+      "SELECT e.*, p.area_id FROM expedientes e INNER JOIN procesos p ON e.proceso_id = p.id WHERE e.id = $1",
+      [expedienteId]
+    );
+    if (expResult.rows.length === 0) {
+      throw Object.assign(new Error("Expediente no encontrado"), { statusCode: 404 });
+    }
+    expediente = expResult.rows[0];
+  }
+
+  // Obtener siguiente etapa
+  const etapaResult = await pool.query(
+    "SELECT * FROM etapas_proceso WHERE proceso_id = $1 AND orden > (SELECT orden FROM etapas_proceso WHERE id = $2) ORDER BY orden ASC LIMIT 1",
+    [expediente.proceso_id, expediente.etapa_actual_id]
+  );
+  if (etapaResult.rows.length === 0) {
+    throw Object.assign(new Error("No hay mas etapas para avanzar"), { statusCode: 400 });
+  }
+  const nuevaEtapa = etapaResult.rows[0];
+
+  // HU-21: Verificar permiso si no se saltea
+  if (!skipPermisos && rolId) {
+    const permiso = await pool.query(
+      `SELECT 1 FROM transiciones_permitidas WHERE proceso_id = $1 AND etapa_from_id = $2 AND etapa_to_id = $3 AND rol_id = $4`,
+      [expediente.proceso_id, expediente.etapa_actual_id, nuevaEtapa.id, rolId]
+    );
+    if (permiso.rows.length === 0) {
+      throw Object.assign(new Error("Tu rol no tiene permiso para ejecutar esta transicion"), { statusCode: 403 });
+    }
+  }
+
+  // Actualizar expediente
+  await pool.query(
+    "UPDATE expedientes SET etapa_actual_id = $1, fecha_actualizacion = CURRENT_TIMESTAMP WHERE id = $2",
+    [nuevaEtapa.id, expedienteId]
+  );
+
+  // Registrar en historial
+  await pool.query(
+    "INSERT INTO historial_etapas (expediente_id, etapa_anterior_id, etapa_nueva_id, usuario_id, observacion) VALUES ($1, $2, $3, $4, $5)",
+    [expedienteId, expediente.etapa_actual_id, nuevaEtapa.id, usuarioId, observacion || "Avance automático"]
+  );
+
+  // Generar tareas automaticamente para la nueva etapa
+  if (nuevaEtapa.tipo_tarea && nuevaEtapa.rol_id) {
+    await generarTareasPorEtapa(expedienteId, nuevaEtapa.id, pool);
+  }
+
+  return { exito: true, nueva_etapa: nuevaEtapa };
 }
 
 // POST /api/expedientes/:id/rechazar - Rechazar expediente (etapa terminal negativa)
@@ -2078,6 +2097,19 @@ app.patch("/api/tareas/:id", async (req, res) => {
     `, [estado, observacion, id]);
     if (result.rows.length === 0) {
       return res.status(404).json({ error: "Tarea no encontrada" });
+    }
+
+    // HU-11/HU-12: Al completar una tarea, avanzar el expediente a la siguiente etapa
+    if (estado === 'completada' && tarea.expediente_id) {
+      try {
+        await internalAvanzarExpediente(tarea.expediente_id, usuario_id, observacion, pool, {
+          skipPermisos: true, // ya validamos que es dueño de la tarea
+          rolId: null
+        });
+      } catch (err) {
+        console.warn(`[tareas] No se pudo avanzar el expediente ${tarea.expediente_id} desde la tarea ${id}: ${err.message}`);
+        // No fallar la respuesta — la tarea ya se marcó como completada
+      }
     }
 
     // HU-12: Si se rechaza una tarea de tipo 'aprobacion', rechazar el expediente completo
