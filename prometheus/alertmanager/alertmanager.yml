@@ -10,6 +10,7 @@ route:
     - receiver: discord-monitoring
       matchers:
         - severity = critical
+      group_interval: 30s
       repeat_interval: 1m
       continue: true
 
