@@ -164,6 +164,23 @@ services:
   # ============================================
   # Monitoring (internal-only, sin puertos expuestos)
   # ============================================
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: alertmanager
+    environment:
+      - ALERTMANAGER_DISCORD_WEBHOOK_URL=${ALERTMANAGER_DISCORD_WEBHOOK_URL}
+    volumes:
+      - ./prometheus/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./prometheus/alertmanager/discord.tmpl:/etc/alertmanager/discord.tmpl:ro
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+      - "--web.external-url=/alertmanager"
+    depends_on:
+      - prometheus
+    networks:
+      - app-network
+
   prometheus:
     image: prom/prometheus:v2.54.1
     container_name: prometheus
@@ -177,11 +194,14 @@ services:
       - "--web.external-url=/prometheus"
       - "--web.route-prefix=/prometheus"
     depends_on:
+      - alertmanager
       - ms-usuarios
       - ms-mantenedor
       - ms-expedientes
       - node-exporter
       - postgres-exporter
+      - postgres-exporter-mantenedor
+      - postgres-exporter-expedientes
       - nginx-exporter
     networks:
       - app-network
@@ -228,6 +248,26 @@ services:
       - DATA_SOURCE_NAME=postgresql://postgres:password123@db:5432/db_usuarios?sslmode=disable
     depends_on:
       - db
+    networks:
+      - app-network
+
+  postgres-exporter-mantenedor:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: postgres-exporter-mantenedor
+    environment:
+      - DATA_SOURCE_NAME=postgresql://postgres:password123@db_mantenedor:5432/db_mantenedor?sslmode=disable
+    depends_on:
+      - db_mantenedor
+    networks:
+      - app-network
+
+  postgres-exporter-expedientes:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: postgres-exporter-expedientes
+    environment:
+      - DATA_SOURCE_NAME=postgresql://postgres:password123@db_expedientes:5432/db_expedientes?sslmode=disable
+    depends_on:
+      - db_expedientes
     networks:
       - app-network
 

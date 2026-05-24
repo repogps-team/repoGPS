@@ -4,7 +4,7 @@ const { Pool } = require("pg");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
-const { metricsHandler, metricsMiddleware } = require("./src/metrics");
+const { metricsHandler, metricsMiddleware, loginTotal, userCreatedTotal } = require("./src/metrics");
 
 const app = express();
 app.use(cors());
@@ -104,6 +104,7 @@ app.post("/api/usuarios", async (req, res) => {
       );
     }
 
+    userCreatedTotal.inc();
     res.status(201).json(nuevoUsuario);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -373,20 +374,25 @@ app.post("/api/login", async (req, res) => {
     );
 
     if (result.rows.length === 0) {
+      loginTotal.inc({ status: "error" });
       return res.status(401).json({ error: "Credenciales inválidas" });
     }
 
     const usuario = result.rows[0];
 
     if (!usuario.estado_activo) {
+      loginTotal.inc({ status: "error" });
       return res.status(403).json({ error: "Usuario inactivo" });
     }
 
     // Verificar password con bcrypt (HU-01)
     const match = await bcrypt.compare(password, usuario.password_hash);
     if (!match) {
+      loginTotal.inc({ status: "error" });
       return res.status(401).json({ error: "Credenciales inválidas" });
     }
+
+    loginTotal.inc({ status: "success" });
 
     // Generar JWT con area_id
     // Obtener el área principal del usuario (primera asignada)

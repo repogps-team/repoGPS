@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const { Pool } = require("pg");
-const { metricsHandler, metricsMiddleware } = require("./src/metrics");
+const { metricsHandler, metricsMiddleware, contratistaCreatedTotal, areaCreatedTotal } = require("./src/metrics");
 
 const app = express();
 app.use(cors());
@@ -91,6 +91,7 @@ app.post("/api/contratistas", async (req, res) => {
       "INSERT INTO contratistas (razon_social, rut) VALUES ($1, $2) RETURNING *",
       [razon_social, rut]
     );
+    contratistaCreatedTotal.inc();
     res.status(201).json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -198,6 +199,7 @@ app.post("/api/areas", async (req, res) => {
       "INSERT INTO areas (contratista_id, nombre) VALUES ($1, $2) RETURNING *",
       [contratista_id, nombre]
     );
+    areaCreatedTotal.inc();
     res.status(201).json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });

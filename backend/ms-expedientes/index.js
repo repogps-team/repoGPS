@@ -8,7 +8,9 @@ const {
   metricsMiddleware,
   expedienteCreatedTotal,
   documentoUploadedTotal,
-  uploadErrorsTotal
+  uploadErrorsTotal,
+  procesoCreatedTotal,
+  etapaCreatedTotal
 } = require("./src/metrics");
 
 // Storage client for GarageHQ
@@ -577,7 +579,7 @@ app.post("/api/procesos", async (req, res) => {
       "INSERT INTO procesos (area_id, nombre, descripcion) VALUES ($1, $2, $3) RETURNING *",
       [areaIdNum, nombre, descripcion]
     );
-    expedienteCreatedTotal.inc();
+    procesoCreatedTotal.inc();
     res.status(201).json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -734,6 +736,7 @@ app.post("/api/etapas-proceso", async (req, res) => {
     );
     
     await client.query('COMMIT');
+    etapaCreatedTotal.inc();
     res.status(201).json(result.rows[0]);
   } catch (err) {
     await client.query('ROLLBACK');

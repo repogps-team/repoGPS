@@ -82,6 +82,8 @@ function getApp() {
   jest.doMock('../src/metrics', () => ({
     metricsHandler: (req, res) => res.send('# mock metrics'),
     metricsMiddleware: (req, res, next) => next(),
+    loginTotal: { inc: jest.fn() },
+    userCreatedTotal: { inc: jest.fn() },
   }));
 
   return require('../index');
