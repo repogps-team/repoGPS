@@ -1157,6 +1157,21 @@ app.post("/api/expedientes/:id/devolver", authMiddleware, async (req, res) => {
       [id, expediente.etapa_actual_id, etapaAnterior.id, usuario_id, observacion || "Devolución"]
     );
 
+    // Cancelar tareas activas de la etapa que dejamos (pendientes o vistas)
+    const etapaColumnDev = await getTareasEtapaColumn();
+    await pool.query(`
+      UPDATE tareas_asignadas 
+      SET estado = 'rechazada', 
+          observacion = COALESCE(observacion, '') || ' | Expediente devuelto a etapa anterior',
+          fecha_termino = CURRENT_TIMESTAMP
+      WHERE expediente_id = $1 AND ${etapaColumnDev} = $2 AND estado IN ('pendiente', 'visto')
+    `, [id, expediente.etapa_actual_id]);
+
+    // Generar tareas para la etapa a la que volvemos
+    if (etapaAnterior.tipo_tarea && etapaAnterior.rol_id) {
+      await generarTareasPorEtapa(id, etapaAnterior.id, pool);
+    }
+
     const updated = await pool.query(`
       SELECT e.*, p.nombre AS proceso_nombre, p.area_id, ep.nombre AS etapa_actual, ep.es_final, ep.tipo_etapa
       FROM expedientes e
