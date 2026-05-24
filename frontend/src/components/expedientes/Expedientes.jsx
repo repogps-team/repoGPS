@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useExpedientes } from '../../hooks/useExpedientes'
 import { useProcesos } from '../../hooks/useProcesos'
 import { useDisciplinas } from '../../hooks/useDisciplinas'
+import { useCategorias } from '../../hooks/useCategorias'
 import { useApi } from '../../hooks/useApi'
 import { useContratistas } from '../../hooks/useContratistas'
 import ExpedienteDetalle from './ExpedienteDetalle'
@@ -24,6 +25,7 @@ const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicia
   } = useExpedientes()
   const { procesos, cargarProcesos } = useProcesos()
   const { cargarDisciplinas } = useDisciplinas()
+  const { categorias, subtipos, cargarCategorias, cargarSubtipos } = useCategorias()
   const { contratistas, cargarContratistas } = useContratistas()
 
   const [mostrarForm, setMostrarForm] = useState(false)
@@ -32,6 +34,8 @@ const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicia
     area_id: '',
     proceso_id: '',
     disciplina_id: '',
+    categoria_id: '',
+    subtipo_id: '',
     titulo: '',
     descripcion: '',
     fecha_termino: ''
@@ -58,8 +62,8 @@ const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicia
 
   // Cargar opciones iniciales
   useEffect(() => {
-    Promise.all([cargarExpedientes(), cargarProcesos(), cargarDisciplinas(), cargarContratistas()])
-  }, [cargarExpedientes, cargarProcesos, cargarDisciplinas, cargarContratistas])
+    Promise.all([cargarExpedientes(), cargarProcesos(), cargarDisciplinas(), cargarCategorias(), cargarContratistas()])
+  }, [cargarExpedientes, cargarProcesos, cargarDisciplinas, cargarCategorias, cargarContratistas])
 
 
   // Cargar áreas cuando se selecciona un contratista
@@ -149,7 +153,7 @@ const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicia
 
   const handleAreaChange = async (e) => {
     const areaId = e.target.value
-    setFormData(prev => ({ ...prev, area_id: areaId, disciplina_id: '', proceso_id: '' }))
+    setFormData(prev => ({ ...prev, area_id: areaId, disciplina_id: '', categoria_id: '', subtipo_id: '', proceso_id: '' }))
     setDisciplinasFiltradas([])
     setProcesosFiltrados([])
     setEtapasProceso([])
@@ -161,6 +165,14 @@ const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicia
 
   const handleDisciplinaChange = (e) => {
     setFormData(prev => ({ ...prev, disciplina_id: e.target.value }))
+  }
+
+  const handleCategoriaChange = (e) => {
+    const catId = e.target.value
+    setFormData(prev => ({ ...prev, categoria_id: catId, subtipo_id: '' }))
+    if (catId) {
+      cargarSubtipos(catId)
+    }
   }
 
   const handleSubmit = async (e) => {
@@ -175,7 +187,7 @@ const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicia
     try {
       await crearExpediente(formData)
       setMostrarForm(false)
-      setFormData({ contratista_id: '', area_id: '', proceso_id: '', disciplina_id: '', titulo: '', descripcion: '', fecha_termino: '' })
+      setFormData({ contratista_id: '', area_id: '', proceso_id: '', disciplina_id: '', categoria_id: '', subtipo_id: '', titulo: '', descripcion: '', fecha_termino: '' })
       setAreasFiltradas([])
       setDisciplinasFiltradas([])
       setProcesosFiltrados([])
@@ -270,6 +282,34 @@ const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicia
                     <option value="">Seleccione...</option>
                     {disciplinasFiltradas.map(d => (
                       <option key={d.id} value={d.id}>{d.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="field">
+                  <label>Categoría</label>
+                  <select
+                    value={formData.categoria_id}
+                    onChange={handleCategoriaChange}
+                    disabled={!formData.area_id}
+                  >
+                    <option value="">Seleccione...</option>
+                    {categorias.filter(c => c.estado_activo !== false).map(c => (
+                      <option key={c.id} value={c.id}>{c.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="field">
+                  <label>Subtipo</label>
+                  <select
+                    value={formData.subtipo_id}
+                    onChange={e => setFormData(prev => ({ ...prev, subtipo_id: e.target.value }))}
+                    disabled={!formData.categoria_id}
+                  >
+                    <option value="">Seleccione...</option>
+                    {subtipos.filter(s => s.estado_activo !== false).map(s => (
+                      <option key={s.id} value={s.id}>{s.nombre}</option>
                     ))}
                   </select>
                 </div>

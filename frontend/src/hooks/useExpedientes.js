@@ -29,6 +29,7 @@ export const useExpedientes = () => {
     const data = await post('/api/expedientes', {
       proceso_id: Number(expediente.proceso_id),
       disciplina_id: Number(expediente.disciplina_id),
+      subtipo_id: expediente.subtipo_id ? Number(expediente.subtipo_id) : null,
       titulo: expediente.titulo,
       descripcion: expediente.descripcion,
       fecha_termino: expediente.fecha_termino || null
