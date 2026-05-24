@@ -16,7 +16,7 @@ route:
 receivers:
   - name: discord-monitoring
     discord_configs:
-      - webhook_url: ${ALERTMANAGER_DISCORD_WEBHOOK_URL}
+      - webhook_url: __DISCORD_WEBHOOK_URL__
         title: '{{ template "discord.title" . }}'
         message: '{{ template "discord.message" . }}'
 

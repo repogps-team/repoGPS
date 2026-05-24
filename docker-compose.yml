@@ -173,9 +173,15 @@ services:
       - ./prometheus/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - ./prometheus/alertmanager/discord.tmpl:/etc/alertmanager/discord.tmpl:ro
     command:
-      - "--config.file=/etc/alertmanager/alertmanager.yml"
-      - "--storage.path=/alertmanager"
-      - "--web.external-url=http://localhost:9093/alertmanager"
+      - /bin/sh
+      - -c
+      - |
+        sed "s|__DISCORD_WEBHOOK_URL__|$${ALERTMANAGER_DISCORD_WEBHOOK_URL}|g" \
+          /etc/alertmanager/alertmanager.yml > /tmp/alertmanager.yml && \
+        exec /bin/alertmanager \
+          --config.file=/tmp/alertmanager.yml \
+          --storage.path=/alertmanager \
+          --web.external-url=http://localhost:9093/alertmanager
     networks:
       - app-network
 
