@@ -146,9 +146,11 @@ describe('POST /api/expedientes', () => {
   });
 
   test('crea expediente exitosamente', async () => {
-    // Primera query: obtener primera etapa del proceso
+    // Primera query: validar que proceso existe en DB local
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: 1, area_id: 1 }], rowCount: 1 });
+    // Segunda query: obtener primera etapa del proceso
     mockQuery.mockResolvedValueOnce({ rows: [{ id: 10 }], rowCount: 1 });
-    // Segunda query: INSERT
+    // Tercera query: INSERT
     mockQuery.mockResolvedValueOnce({
       rows: [{ id: 1, proceso_id: 1, titulo: 'Nuevo Exp', disciplina_id: 1, subtipo_id: null }],
       rowCount: 1,
@@ -169,18 +171,13 @@ describe('POST /api/expedientes', () => {
   });
 
   test('retorna 400 si disciplina y proceso tienen áreas distintas', async () => {
-    // Mock fetch responses for validation
-    let fetchCall = 0;
-    global.fetch = jest.fn().mockImplementation(() => {
-      fetchCall++;
-      if (fetchCall === 1) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ id: 1, area_id: 2 }) });
-      }
-      if (fetchCall === 2) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ id: 1, area_id: 1 }) });
-      }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+    // Mock fetch: solo 1 llamada a ms-mantenedor para disciplina (area_id=2)
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ id: 1, area_id: 2 }),
     });
+    // Proceso se consulta en DB local (area_id=1) -> áreas distintas
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: 1, area_id: 1 }], rowCount: 1 });
 
     const app = getApp();
     const res = await request(app)
