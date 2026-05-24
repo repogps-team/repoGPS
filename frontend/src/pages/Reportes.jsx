@@ -36,6 +36,15 @@ export default function Reportes() {
   const iframeRef = useRef(null)
   const pollRef = useRef(null)
   const mountedRef = useRef(true)
+  const loadingTimeoutRef = useRef(null)
+
+  // Agregar 3 segundos extras al overlay de carga
+  const finishLoading = useCallback(() => {
+    if (!mountedRef.current) return
+    loadingTimeoutRef.current = setTimeout(() => {
+      if (mountedRef.current) setIsLoading(false)
+    }, 3000)
+  }, [])
 
   // Cargar datos para filtros
   const { areas, contratistas, cargarAreas, cargarContratistas } = useAreas()
@@ -45,7 +54,10 @@ export default function Reportes() {
     cargarAreas()
     cargarContratistas()
     cargarProcesos()
-    return () => { mountedRef.current = false }
+    return () => {
+      mountedRef.current = false
+      if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current)
+    }
   }, [])
 
   // Construir URL del iframe con filtros como variables de Grafana
@@ -90,9 +102,7 @@ export default function Reportes() {
         )
 
         if (panels.length > 0 || loadingIndicator.length === 0) {
-          if (mountedRef.current) {
-            setIsLoading(false)
-          }
+          finishLoading()
           clearInterval(pollRef.current)
           pollRef.current = null
         }
@@ -108,9 +118,7 @@ export default function Reportes() {
         clearInterval(pollRef.current)
         pollRef.current = null
       }
-      if (mountedRef.current) {
-        setIsLoading(false)
-      }
+      finishLoading()
     }, 20000)
   }, [])
 
@@ -268,8 +276,8 @@ export default function Reportes() {
             <div className={`reportes-overlay${isLoading ? '' : ' hidden'}`}>
               {!hasApplied ? (
                 <>
-                  <h2>Filtra los datos para cargar los dashboard de reportes</h2>
-                  <p>Seleccioná los filtros que quieras y hacé click en "Aplicar filtros"</p>
+                  <h2>Filtre los datos para cargar los dashboards de reportes</h2>
+                  <p>Seleccione los filtros que desee y haga clic en "Aplicar filtros"</p>
                 </>
               ) : (
                 <>
@@ -281,7 +289,7 @@ export default function Reportes() {
           </>
         ) : (
           <div className="empty-state">
-            <p>Seleccioná los filtros y hacé click en "Aplicar filtros" para comenzar</p>
+            <p>Seleccione los filtros y haga clic en "Aplicar filtros" para comenzar</p>
           </div>
         )}
       </div>
