@@ -31,7 +31,6 @@ export default function Reportes() {
   const [fechaDesde, setFechaDesde] = useState('')
   const [fechaHasta, setFechaHasta] = useState('')
 
-  const iframeRef = useRef(null)
   const pendingFilterRef = useRef(null)
 
   // Cargar datos para filtros
@@ -63,61 +62,20 @@ export default function Reportes() {
     return `/grafana/d/${uid}?${params.toString()}`
   }, [activeTab, areaId, contratistaId, procesoId, fechaDesde, fechaHasta])
 
-  // Carga inicial: montar el iframe con el primer tab
+  // Carga inicial y cambios de filtros/tab: actualizar src del iframe
+  // (el iframe recarga al cambiar src, es comportamiento normal del browser)
   useEffect(() => {
-    setIframeSrc(buildIframeSrc())
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // Cambio de tab: recarga completa del iframe (distinto dashboard)
-  useEffect(() => {
-    if (!iframeSrc) return // skip initial mount
-    setIframeSrc(buildIframeSrc())
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab])
-
-  // Cambio de filtros: actualiza la URL del iframe SIN recargar
-  // (same-origin: nginx proxy /grafana/)
-  useEffect(() => {
-    if (!iframeRef.current) return
-
-    // Debounce: agrupar cambios rápidos de filtros
+    // Debounce 400ms: agrupar cambios rápidos de filtros en un solo reload
     if (pendingFilterRef.current) clearTimeout(pendingFilterRef.current)
 
     pendingFilterRef.current = setTimeout(() => {
-      const iframe = iframeRef.current
-      if (!iframe || !iframe.contentWindow) return
-
-      const newUrl = buildIframeSrc()
-
-      try {
-        // Same-origin check: acceder a location.href tira error si es cross-origin
-        const currentHref = iframe.contentWindow.location.href
-        if (!currentHref) throw new Error('no href') // safety
-
-        // Mismo dashboard? Solo actualizar query params sin recargar
-        const currentPath = iframe.contentWindow.location.pathname
-        const dashboardPath = `/grafana/d/${DASHBOARD_UIDS[activeTab]}`
-
-        if (currentPath === dashboardPath) {
-          const urlObj = new URL(newUrl, iframe.contentWindow.location.origin)
-          iframe.contentWindow.history.replaceState(null, '', urlObj.pathname + urlObj.search)
-          // Disparar evento para que Grafana reaccione al cambio de URL
-          iframe.contentWindow.dispatchEvent(new PopStateEvent('popstate'))
-        } else {
-          // Ruta distinta (otro dashboard) → recarga completa
-          iframe.src = newUrl
-        }
-      } catch {
-        // Cross-origin o error → recarga completa como fallback
-        iframe.src = newUrl
-      }
+      setIframeSrc(buildIframeSrc())
     }, 400)
 
     return () => {
       if (pendingFilterRef.current) clearTimeout(pendingFilterRef.current)
     }
-  }, [areaId, contratistaId, procesoId, fechaDesde, fechaHasta, activeTab, buildIframeSrc])
+  }, [buildIframeSrc])
 
   const clearFilters = () => {
     setAreaId('')
@@ -223,7 +181,6 @@ export default function Reportes() {
       <div className="reportes-iframe-container">
         {iframeSrc ? (
           <iframe
-            ref={iframeRef}
             src={iframeSrc}
             title={`Dashboard ${activeTab}`}
             className="reportes-iframe"
