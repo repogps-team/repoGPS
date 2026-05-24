@@ -176,8 +176,6 @@ services:
       - "--config.file=/etc/alertmanager/alertmanager.yml"
       - "--storage.path=/alertmanager"
       - "--web.external-url=/alertmanager"
-    depends_on:
-      - prometheus
     networks:
       - app-network
 
@@ -194,7 +192,6 @@ services:
       - "--web.external-url=/prometheus"
       - "--web.route-prefix=/prometheus"
     depends_on:
-      - alertmanager
       - ms-usuarios
       - ms-mantenedor
       - ms-expedientes
