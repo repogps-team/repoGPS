@@ -451,7 +451,7 @@ async function validarReglasEtapaTransacted({ proceso_id, orden, tipo_etapa, tip
 async function getTareaConEtapa(tareaId) {
   let etapaColumn = await getTareasEtapaColumn();
   const buildQuery = () => `
-    SELECT t.id, t.usuario_id, t.estado, ep.rol_id
+    SELECT t.id, t.usuario_id, t.estado, t.expediente_id, ep.rol_id, ep.tipo_tarea
     FROM tareas_asignadas t
     INNER JOIN etapas_proceso ep ON t.${etapaColumn} = ep.id
     WHERE t.id = $1
@@ -1221,6 +1221,71 @@ app.post("/api/expedientes/:id/devolver", authMiddleware, async (req, res) => {
   }
 });
 
+// Función compartida: rechazar expediente a etapa terminal "Rechazado"
+// Devuelve { exito: true, nueva_etapa } o lanza error
+async function internalRechazarExpediente(expedienteId, usuarioId, observacion, pool, options = {}) {
+  const { skipPermisos = false, rolId = null } = options;
+
+  const expResult = await pool.query("SELECT e.*, p.area_id FROM expedientes e INNER JOIN procesos p ON e.proceso_id = p.id WHERE e.id = $1", [expedienteId]);
+  if (expResult.rows.length === 0) {
+    throw Object.assign(new Error("Expediente no encontrado"), { statusCode: 404 });
+  }
+  const expediente = expResult.rows[0];
+
+  // Buscar etapa Rechazado para este proceso
+  let etapaResult = await pool.query(
+    "SELECT * FROM etapas_proceso WHERE proceso_id = $1 AND LOWER(nombre) = 'rechazado' AND estado_activo = true LIMIT 1",
+    [expediente.proceso_id]
+  );
+
+  let rechazadoEtapa;
+  if (etapaResult.rows.length === 0) {
+    const maxOrden = await pool.query(
+      "SELECT COALESCE(MAX(orden), 0) + 1 AS nuevo_orden FROM etapas_proceso WHERE proceso_id = $1",
+      [expediente.proceso_id]
+    );
+    const nuevoOrden = maxOrden.rows[0].nuevo_orden;
+    const newEtapa = await pool.query(
+      "INSERT INTO etapas_proceso (proceso_id, nombre, orden, es_final) VALUES ($1, 'Rechazado', $2, true) RETURNING *",
+      [expediente.proceso_id, nuevoOrden]
+    );
+    rechazadoEtapa = newEtapa.rows[0];
+  } else {
+    rechazadoEtapa = etapaResult.rows[0];
+  }
+
+  // No permitir rechazar si ya está en etapa final
+  const etapaActual = await pool.query("SELECT * FROM etapas_proceso WHERE id = $1", [expediente.etapa_actual_id]);
+  if (etapaActual.rows.length > 0 && etapaActual.rows[0].es_final) {
+    throw Object.assign(new Error("El expediente ya se encuentra en una etapa final"), { statusCode: 400 });
+  }
+
+  // HU-21: Verificar permiso si no es admin y no se saltea
+  if (!skipPermisos && rolId) {
+    const permiso = await pool.query(
+      `SELECT 1 FROM transiciones_permitidas WHERE proceso_id = $1 AND etapa_from_id = $2 AND etapa_to_id = $3 AND rol_id = $4`,
+      [expediente.proceso_id, expediente.etapa_actual_id, rechazadoEtapa.id, rolId]
+    );
+    if (permiso.rows.length === 0) {
+      throw Object.assign(new Error("Tu rol no tiene permiso para rechazar este expediente"), { statusCode: 403 });
+    }
+  }
+
+  // Actualizar expediente
+  await pool.query(
+    "UPDATE expedientes SET etapa_actual_id = $1, fecha_actualizacion = CURRENT_TIMESTAMP, fecha_termino = CURRENT_TIMESTAMP WHERE id = $2",
+    [rechazadoEtapa.id, expedienteId]
+  );
+
+  // Registrar en historial
+  await pool.query(
+    "INSERT INTO historial_etapas (expediente_id, etapa_anterior_id, etapa_nueva_id, usuario_id, observacion) VALUES ($1, $2, $3, $4, $5)",
+    [expedienteId, expediente.etapa_actual_id, rechazadoEtapa.id, usuarioId, observacion || "Expediente rechazado"]
+  );
+
+  return { exito: true, nueva_etapa: rechazadoEtapa };
+}
+
 // POST /api/expedientes/:id/rechazar - Rechazar expediente (etapa terminal negativa)
 app.post("/api/expedientes/:id/rechazar", authMiddleware, async (req, res) => {
   const { id } = req.params;
@@ -1228,82 +1293,20 @@ app.post("/api/expedientes/:id/rechazar", authMiddleware, async (req, res) => {
   const { id: usuario_id, rol_id, esAdmin, area_id } = req.user;
 
   try {
-    // Obtener expediente verificando área
-    let expQuery = `
-      SELECT e.*, p.area_id 
-      FROM expedientes e 
-      INNER JOIN procesos p ON e.proceso_id = p.id 
-      WHERE e.id = $1
-    `;
-    const expParams = [id];
-
-    if (!esAdmin && area_id) {
-      expQuery += ` AND p.area_id = $2`;
-      expParams.push(area_id);
-    }
-
-    const expResult = await pool.query(expQuery, expParams);
-    if (expResult.rows.length === 0) {
+    // Verificar acceso al expediente por área
+    const checkResult = await pool.query(
+      `SELECT e.id FROM expedientes e INNER JOIN procesos p ON e.proceso_id = p.id WHERE e.id = $1${!esAdmin && area_id ? ' AND p.area_id = $2' : ''}`,
+      !esAdmin && area_id ? [id, area_id] : [id]
+    );
+    if (checkResult.rows.length === 0) {
       return res.status(404).json({ error: "Expediente no encontrado" });
     }
-    const expediente = expResult.rows[0];
 
-    // Buscar etapa Rechazado para este proceso
-    let etapaResult = await pool.query(
-      "SELECT * FROM etapas_proceso WHERE proceso_id = $1 AND LOWER(nombre) = 'rechazado' AND estado_activo = true LIMIT 1",
-      [expediente.proceso_id]
-    );
-
-    let rechazadoEtapa;
-    if (etapaResult.rows.length === 0) {
-      // Crear etapa Rechazado automáticamente al final del proceso
-      const maxOrden = await pool.query(
-        "SELECT COALESCE(MAX(orden), 0) + 1 AS nuevo_orden FROM etapas_proceso WHERE proceso_id = $1",
-        [expediente.proceso_id]
-      );
-      const nuevoOrden = maxOrden.rows[0].nuevo_orden;
-
-      const newEtapa = await pool.query(
-        "INSERT INTO etapas_proceso (proceso_id, nombre, orden, es_final) VALUES ($1, 'Rechazado', $2, true) RETURNING *",
-        [expediente.proceso_id, nuevoOrden]
-      );
-      rechazadoEtapa = newEtapa.rows[0];
-    } else {
-      rechazadoEtapa = etapaResult.rows[0];
-    }
-
-    // No permitir rechazar si ya está en etapa final
-    const etapaActual = await pool.query("SELECT * FROM etapas_proceso WHERE id = $1", [expediente.etapa_actual_id]);
-    if (etapaActual.rows.length > 0 && etapaActual.rows[0].es_final) {
-      return res.status(400).json({ error: "El expediente ya se encuentra en una etapa final" });
-    }
-
-    // HU-21: Verificar permiso si no es admin
-    if (!esAdmin) {
-      const permiso = await pool.query(
-        `SELECT 1 FROM transiciones_permitidas
-         WHERE proceso_id = $1
-           AND etapa_from_id = $2
-           AND etapa_to_id = $3
-           AND rol_id = $4`,
-        [expediente.proceso_id, expediente.etapa_actual_id, rechazadoEtapa.id, rol_id]
-      );
-      if (permiso.rows.length === 0) {
-        return res.status(403).json({ error: "Tu rol no tiene permiso para rechazar este expediente" });
-      }
-    }
-
-    // Actualizar expediente
-    await pool.query(
-      "UPDATE expedientes SET etapa_actual_id = $1, fecha_actualizacion = CURRENT_TIMESTAMP, fecha_termino = CURRENT_TIMESTAMP WHERE id = $2",
-      [rechazadoEtapa.id, id]
-    );
-
-    // Registrar en historial
-    await pool.query(
-      "INSERT INTO historial_etapas (expediente_id, etapa_anterior_id, etapa_nueva_id, usuario_id, observacion) VALUES ($1, $2, $3, $4, $5)",
-      [id, expediente.etapa_actual_id, rechazadoEtapa.id, usuario_id, observacion || "Expediente rechazado"]
-    );
+    // Reutilizar la función compartida
+    await internalRechazarExpediente(id, usuario_id, observacion, pool, {
+      skipPermisos: esAdmin,
+      rolId: esAdmin ? null : rol_id
+    });
 
     const updated = await pool.query(`
       SELECT e.*, p.nombre AS proceso_nombre, p.area_id, ep.nombre AS etapa_actual, ep.es_final, ep.tipo_etapa
@@ -1313,11 +1316,10 @@ app.post("/api/expedientes/:id/rechazar", authMiddleware, async (req, res) => {
       WHERE e.id = $1
     `, [id]);
 
-    const exp = updated.rows[0];
-
-    res.json({ message: "Expediente rechazado", nueva_etapa: rechazadoEtapa, expediente: { ...exp, estado: 'Rechazado' } });
+    res.json({ message: "Expediente rechazado", expediente: { ...updated.rows[0], estado: 'Rechazado' } });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    const statusCode = err.statusCode || 500;
+    res.status(statusCode).json({ error: err.message });
   }
 });
 
@@ -2075,6 +2077,20 @@ app.patch("/api/tareas/:id", async (req, res) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ error: "Tarea no encontrada" });
     }
+
+    // HU-12: Si se rechaza una tarea de tipo 'aprobacion', rechazar el expediente completo
+    if (estado === 'rechazada' && tarea.tipo_tarea === 'aprobacion' && tarea.expediente_id) {
+      try {
+        await internalRechazarExpediente(tarea.expediente_id, usuario_id, observacion, pool, {
+          skipPermisos: true, // ya validamos que es dueño de la tarea
+          rolId: null
+        });
+      } catch (err) {
+        console.warn(`[tareas] No se pudo rechazar el expediente ${tarea.expediente_id} desde la tarea ${id}: ${err.message}`);
+        // No fallar la respuesta — la tarea ya se marcó como rechazada
+      }
+    }
+
     res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
