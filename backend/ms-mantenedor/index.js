@@ -657,6 +657,11 @@ app.patch("/api/categorias/:id/estado", async (req, res) => {
 
   // Servidor
   const PORT = process.env.PORT || 3001;
-  app.listen(PORT, () => {
-    console.log(`Servidor ms-mantenedor corriendo en el puerto ${PORT}`);
-  });
+
+  if (process.env.NODE_ENV !== 'test') {
+    app.listen(PORT, () => {
+      console.log(`Servidor ms-mantenedor corriendo en el puerto ${PORT}`);
+    });
+  }
+
+  module.exports = app;

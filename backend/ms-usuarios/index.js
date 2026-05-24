@@ -438,8 +438,13 @@ app.post("/api/login", async (req, res) => {
 
 // Iniciar servidor en puerto 3000
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, async () => {
-  console.log(`Servidor ms-usuarios corriendo en el puerto ${PORT}`);
-  // Ejecutar migración una vez al iniciar
-  await migrarPasswords();
-});
+
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, async () => {
+    console.log(`Servidor ms-usuarios corriendo en el puerto ${PORT}`);
+    // Ejecutar migración una vez al iniciar
+    await migrarPasswords();
+  });
+}
+
+module.exports = app;

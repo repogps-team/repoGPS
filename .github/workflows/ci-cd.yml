@@ -59,7 +59,7 @@ jobs:
       # Backend ms-mantenedor
       - name: Instalar Backend Mantenedor
         working-directory: ./backend/ms-mantenedor
-        run: npm install
+        run: npm ci
 
       # Backend ms-expedientes
       - name: Instalar Backend Expedientes
@@ -69,6 +69,16 @@ jobs:
       # Tests ms-expedientes
       - name: Tests Backend Expedientes
         working-directory: ./backend/ms-expedientes
+        run: npm test
+
+      # Tests ms-usuarios
+      - name: Tests Backend Usuarios
+        working-directory: ./backend/ms-usuarios
+        run: npm test
+
+      # Tests ms-mantenedor
+      - name: Tests Backend Mantenedor
+        working-directory: ./backend/ms-mantenedor
         run: npm test
 
   # ==========================================
