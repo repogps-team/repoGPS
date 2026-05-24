@@ -1040,11 +1040,6 @@ app.post("/api/expedientes/:id/avanzar", authMiddleware, async (req, res) => {
   const { observacion } = req.body;
   const { id: usuario_id, rol_id, esAdmin, area_id } = req.user;
 
-  // HU-02: Colaborador no puede avanzar expediente (rol 4)
-  if (Number(rol_id) === 4) {
-    return res.status(403).json({ error: "Colaborador no puede avanzar expedientes" });
-  }
-
   try {
     // Obtener expediente actual con JOIN a procesos para verificar área
     let expQuery = `
@@ -1078,6 +1073,21 @@ app.post("/api/expedientes/:id/avanzar", authMiddleware, async (req, res) => {
     }
 
     const nuevaEtapa = etapaResult.rows[0];
+
+    // HU-21: Verificar que el rol tiene permiso para esta transicion
+    if (!esAdmin) {
+      const permiso = await pool.query(
+        `SELECT 1 FROM transiciones_permitidas
+         WHERE proceso_id = $1
+           AND etapa_from_id = $2
+           AND etapa_to_id = $3
+           AND rol_id = $4`,
+        [expediente.proceso_id, expediente.etapa_actual_id, nuevaEtapa.id, rol_id]
+      );
+      if (permiso.rows.length === 0) {
+        return res.status(403).json({ error: "Tu rol no tiene permiso para ejecutar esta transicion" });
+      }
+    }
 
     // Actualizar expediente
     await pool.query(
@@ -1128,11 +1138,6 @@ app.post("/api/expedientes/:id/devolver", authMiddleware, async (req, res) => {
   const { observacion } = req.body;
   const { id: usuario_id, rol_id, esAdmin, area_id } = req.user;
 
-  // HU-02: Colaborador no puede devolver expediente (rol 4)
-  if (Number(rol_id) === 4) {
-    return res.status(403).json({ error: "Colaborador no puede devolver expedientes" });
-  }
-
   try {
     // Obtener expediente actual verificando área
     let expQuery = `
@@ -1164,6 +1169,21 @@ app.post("/api/expedientes/:id/devolver", authMiddleware, async (req, res) => {
     }
 
     const etapaAnterior = etapaResult.rows[0];
+
+    // HU-21: Verificar que el rol tiene permiso para esta transicion (devolver)
+    if (!esAdmin) {
+      const permiso = await pool.query(
+        `SELECT 1 FROM transiciones_permitidas
+         WHERE proceso_id = $1
+           AND etapa_from_id = $2
+           AND etapa_to_id = $3
+           AND rol_id = $4`,
+        [expediente.proceso_id, expediente.etapa_actual_id, etapaAnterior.id, rol_id]
+      );
+      if (permiso.rows.length === 0) {
+        return res.status(403).json({ error: "Tu rol no tiene permiso para ejecutar esta transicion" });
+      }
+    }
 
     await pool.query(
       "UPDATE expedientes SET etapa_actual_id = $1, fecha_actualizacion = CURRENT_TIMESTAMP WHERE id = $2",
@@ -2051,6 +2071,9 @@ app.get("/api/subtipos", async (req, res) => {
 
 const formRoutes = require('./src/routes/forms');
 app.use(formRoutes(pool, authMiddleware, MS_USUARIOS_URL));
+
+const transicionesRoutes = require('./src/routes/transiciones');
+app.use(transicionesRoutes(pool, authMiddleware));
 
 // Servidor
 const PORT = process.env.PORT || 3002;

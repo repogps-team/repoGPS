@@ -61,6 +61,11 @@ const icons = {
     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
       <path d="M9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4zm2 2H5V5h6.17L13.17 7H19v10zm0-12h-6.17L10.83 5H5v14h14V7z"/>
     </svg>
+  ),
+  transiciones: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/>
+    </svg>
   )
 }
 
@@ -89,7 +94,8 @@ const Sidebar = ({ onLogout, menuItems = [], titulos = {}, usuario = {}, sidebar
   const categoriasAdmin = {
     'Gestión': ['dashboard', 'usuarios', 'contratistas', 'areas', 'disciplinas'],
     'Motor de Procesos': ['procesos', 'etapas'],
-    'Expedientes': ['expedientes', 'categorias', 'formularios', 'reportes']
+    'Expedientes': ['expedientes', 'categorias', 'formularios', 'reportes'],
+    'Configuración': ['transiciones']
   }
 
   // Categorías para el menú no-admin

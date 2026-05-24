@@ -38,6 +38,7 @@ const ExpedienteDetalle = ({
   const [expandedFormId, setExpandedFormId] = useState(null)
   const [expandedFormDetail, setExpandedFormDetail] = useState(null) // schema + respuestas completas
   const [viewingResponse, setViewingResponse] = useState(null)
+  const [transicionesDisponibles, setTransicionesDisponibles] = useState([])
 
   const handleAvanzar = async () => {
     const observacion = prompt('Observación (opcional):')
@@ -76,6 +77,19 @@ const ExpedienteDetalle = ({
         }
       }
       cargarFormularios()
+
+      // HU-21: Cargar transiciones disponibles para el rol del usuario
+      const cargarTransiciones = async () => {
+        try {
+          const data = await get(`/api/transiciones/available?expediente_id=${expediente.id}`)
+          if (Array.isArray(data)) {
+            setTransicionesDisponibles(data)
+          }
+        } catch (err) {
+          console.error('Error al cargar transiciones disponibles:', err)
+        }
+      }
+      cargarTransiciones()
     }
   }, [expediente?.id, get])
 
@@ -200,8 +214,16 @@ const ExpedienteDetalle = ({
             </div>
 
             <div className="exp-actions">
-              <button className="btn btn-primary" onClick={handleAvanzar}>Avanzar</button>
-              <button className="btn btn-secondary" onClick={handleDevolver}>Devolver</button>
+              {transicionesDisponibles.length > 0 || esAdmin ? (
+                <>
+                  <button className="btn btn-primary" onClick={handleAvanzar}>Avanzar</button>
+                  <button className="btn btn-secondary" onClick={handleDevolver}>Devolver</button>
+                </>
+              ) : (
+                <span className="muted" style={{ fontSize: '0.85rem', padding: '8px 0', display: 'inline-block' }}>
+                  No tienes permisos para avanzar este expediente
+                </span>
+              )}
               <button className="btn btn-primary" onClick={() => setShowUploadModal(true)}>Adjuntar archivo</button>
             </div>
 

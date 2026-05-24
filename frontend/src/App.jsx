@@ -21,6 +21,7 @@ import FormAssignment from './components/forms/FormAssignment'
 import FormResponses from './components/forms/FormResponses'
 import Reportes from './pages/Reportes'
 import FormResponderPage from './pages/FormResponderPage'
+import AdminTransiciones from './pages/AdminTransiciones'
 import SyncIndicator from './components/layout/SyncIndicator'
 import BottomBar from './components/layout/BottomBar'
 import { warmupCache } from './lib/cacheWarmup'
@@ -40,11 +41,12 @@ const titulos = {
   etapas: 'Etapas',
   expedientes: 'Expedientes',
   formularios: 'Formularios',
-  reportes: 'Reportes'
+  reportes: 'Reportes',
+  transiciones: 'Transiciones por Rol'
 }
 
 // Menús por rol
-const menuAdmin = ['dashboard', 'usuarios', 'contratistas', 'areas', 'disciplinas', 'categorias', 'procesos', 'etapas', 'expedientes', 'formularios', 'reportes']
+const menuAdmin = ['dashboard', 'usuarios', 'contratistas', 'areas', 'disciplinas', 'categorias', 'procesos', 'etapas', 'expedientes', 'formularios', 'reportes', 'transiciones']
 const menuNoAdmin = ['dashboard', 'bandeja', 'expedientes']
 
 // Mapeo de rutas a secciones
@@ -152,6 +154,7 @@ const SidebarLayout = () => {
           <Route path="formularios/asignar" element={<FormAssignment />} />
           <Route path="formularios/:id/respuestas" element={<FormResponses />} />
           <Route path="reportes" element={<Reportes />} />
+          <Route path="transiciones" element={<AdminTransiciones />} />
         </Routes>
       </Content>
 

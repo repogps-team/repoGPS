@@ -219,7 +219,7 @@ describe('POST /api/expedientes/:id/avanzar (auth)', () => {
     resetMockDb();
   });
 
-  test('avanza expediente a siguiente etapa', async () => {
+  test('avanza expediente a siguiente etapa (admin bypass)', async () => {
     // Query 1: SELECT expediente con JOIN a procesos
     mockQuery.mockResolvedValueOnce({
       rows: [{ id: 1, proceso_id: 1, etapa_actual_id: 5, area_id: 1 }],
@@ -254,7 +254,20 @@ describe('POST /api/expedientes/:id/avanzar (auth)', () => {
     expect(res.body.message).toContain('Expediente avanzado');
   });
 
-  test('retorna 403 si el usuario es colaborador (rol_id=4)', async () => {
+  test('retorna 403 si el usuario no tiene permiso en transiciones_permitidas', async () => {
+    // Query 1: SELECT expediente
+    mockQuery.mockResolvedValueOnce({
+      rows: [{ id: 1, proceso_id: 1, etapa_actual_id: 5, area_id: 1 }],
+      rowCount: 1,
+    });
+    // Query 2: SELECT siguiente etapa
+    mockQuery.mockResolvedValueOnce({
+      rows: [{ id: 6, proceso_id: 1, nombre: 'Desarrollo', orden: 2, tipo_etapa: 'desarrollo', tipo_tarea: null, rol_id: null }],
+      rowCount: 1,
+    });
+    // Query 3: SELECT transiciones_permitidas — sin permiso
+    mockQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 });
+
     const app = getApp();
     const res = await request(app)
       .post('/api/expedientes/1/avanzar')
@@ -262,7 +275,47 @@ describe('POST /api/expedientes/:id/avanzar (auth)', () => {
       .send({});
 
     expect(res.status).toBe(403);
-    expect(res.body.error).toContain('Colaborador no puede avanzar');
+    expect(res.body.error).toContain('Tu rol no tiene permiso');
+  });
+
+  test('avanza expediente con rol que tiene permiso en transiciones_permitidas', async () => {
+    // Query 1: SELECT expediente
+    mockQuery.mockResolvedValueOnce({
+      rows: [{ id: 1, proceso_id: 1, etapa_actual_id: 5, area_id: 1 }],
+      rowCount: 1,
+    });
+    // Query 2: SELECT siguiente etapa
+    mockQuery.mockResolvedValueOnce({
+      rows: [{ id: 6, proceso_id: 1, nombre: 'Desarrollo', orden: 2, tipo_etapa: 'desarrollo', tipo_tarea: null, rol_id: null }],
+      rowCount: 1,
+    });
+    // Query 3: SELECT transiciones_permitidas — tiene permiso
+    mockQuery.mockResolvedValueOnce({
+      rows: [{ id: 1 }],
+      rowCount: 1,
+    });
+    // Query 4: UPDATE expediente
+    mockQuery.mockResolvedValueOnce({ rowCount: 1 });
+    // Query 5: INSERT historial
+    mockQuery.mockResolvedValueOnce({ rowCount: 1 });
+    // Query 6: SELECT expediente actualizado
+    mockQuery.mockResolvedValueOnce({
+      rows: [{
+        id: 1, proceso_id: 1, etapa_actual_id: 6, titulo: 'Exp 1',
+        proceso_nombre: 'Proceso 1', area_id: 1,
+        etapa_actual: 'Desarrollo', tipo_etapa: 'desarrollo', es_final: false,
+      }],
+      rowCount: 1,
+    });
+
+    const app = getApp();
+    const res = await request(app)
+      .post('/api/expedientes/1/avanzar')
+      .set(authHeader({ rol_id: 2 }))
+      .send({ observacion: 'Avanzando' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toContain('Expediente avanzado');
   });
 
   test('retorna 400 si no hay más etapas', async () => {
@@ -325,7 +378,20 @@ describe('POST /api/expedientes/:id/devolver (auth)', () => {
     expect(res.body.message).toContain('Expediente devuelto');
   });
 
-  test('retorna 403 si colaborador intenta devolver', async () => {
+  test('retorna 403 si colaborador intenta devolver sin permiso', async () => {
+    // Query 1: SELECT expediente
+    mockQuery.mockResolvedValueOnce({
+      rows: [{ id: 1, proceso_id: 1, etapa_actual_id: 6, area_id: 1 }],
+      rowCount: 1,
+    });
+    // Query 2: SELECT etapa anterior
+    mockQuery.mockResolvedValueOnce({
+      rows: [{ id: 5, proceso_id: 1, nombre: 'Inicio', orden: 1 }],
+      rowCount: 1,
+    });
+    // Query 3: SELECT transiciones_permitidas — sin permiso
+    mockQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 });
+
     const app = getApp();
     const res = await request(app)
       .post('/api/expedientes/1/devolver')
@@ -333,5 +399,46 @@ describe('POST /api/expedientes/:id/devolver (auth)', () => {
       .send({});
 
     expect(res.status).toBe(403);
+    expect(res.body.error).toContain('Tu rol no tiene permiso');
+  });
+
+  test('devuelve expediente con rol que tiene permiso en transiciones_permitidas', async () => {
+    // Query 1: SELECT expediente
+    mockQuery.mockResolvedValueOnce({
+      rows: [{ id: 1, proceso_id: 1, etapa_actual_id: 6, area_id: 1 }],
+      rowCount: 1,
+    });
+    // Query 2: SELECT etapa anterior
+    mockQuery.mockResolvedValueOnce({
+      rows: [{ id: 5, proceso_id: 1, nombre: 'Inicio', orden: 1 }],
+      rowCount: 1,
+    });
+    // Query 3: SELECT transiciones_permitidas — tiene permiso
+    mockQuery.mockResolvedValueOnce({
+      rows: [{ id: 1 }],
+      rowCount: 1,
+    });
+    // Query 4: UPDATE expediente
+    mockQuery.mockResolvedValueOnce({ rowCount: 1 });
+    // Query 5: INSERT historial
+    mockQuery.mockResolvedValueOnce({ rowCount: 1 });
+    // Query 6: SELECT expediente actualizado
+    mockQuery.mockResolvedValueOnce({
+      rows: [{
+        id: 1, proceso_id: 1, etapa_actual_id: 5, titulo: 'Exp 1',
+        proceso_nombre: 'Proceso 1', area_id: 1,
+        etapa_actual: 'Inicio', tipo_etapa: 'inicio', es_final: false,
+      }],
+      rowCount: 1,
+    });
+
+    const app = getApp();
+    const res = await request(app)
+      .post('/api/expedientes/1/devolver')
+      .set(authHeader({ rol_id: 2 }))
+      .send({ observacion: 'Corregir' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toContain('Expediente devuelto');
   });
 });
