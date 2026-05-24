@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../context/useAuth'
 import { useTareas } from '../../hooks/useTareas'
 
@@ -31,11 +32,18 @@ const BadgeTipo = ({ tipo }) => {
 }
 
 const BandejaTareas = () => {
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { user } = useAuth()
   const { tareas, loading, error, cargarTareas, marcarVisto, actualizarTarea } = useTareas()
   const [observacion, setObservacion] = useState('')
   const [tareaExpandida, setTareaExpandida] = useState(null)
   const [mostrarFormObs, setMostrarFormObs] = useState(null)
+  const [filtroEstado, setFiltroEstado] = useState(searchParams.get('estado') || 'todas')
+
+  const tareasFiltradas = filtroEstado === 'todas'
+    ? tareas
+    : tareas.filter(t => t.estado === filtroEstado)
 
   useEffect(() => {
     if (user?.id && user?.area_id && user?.rol_id) {
@@ -108,7 +116,39 @@ const BandejaTareas = () => {
         </span>
       </h2>
 
-      {tareas.length === 0 ? (
+      {/* Filtros por estado */}
+      <div style={{
+        display: 'flex',
+        gap: '8px',
+        marginBottom: '20px',
+        flexWrap: 'wrap'
+      }}>
+        {[
+          { key: 'todas', label: 'Todas' },
+          { key: 'pendiente', label: 'Nuevas' },
+          { key: 'visto', label: 'Vistas' }
+        ].map(f => (
+          <button
+            key={f.key}
+            onClick={() => setFiltroEstado(f.key)}
+            style={{
+              padding: '6px 16px',
+              borderRadius: '20px',
+              border: `1px solid ${filtroEstado === f.key ? 'var(--primary-color)' : 'var(--border-color)'}`,
+              background: filtroEstado === f.key ? 'var(--primary-color)' : 'transparent',
+              color: filtroEstado === f.key ? 'white' : 'var(--text-muted)',
+              cursor: 'pointer',
+              fontSize: '13px',
+              fontWeight: 500,
+              transition: 'all 0.2s'
+            }}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      {tareasFiltradas.length === 0 ? (
         <div style={{
           background: 'var(--bg-card)',
           border: '1px solid var(--border-color)',
@@ -122,7 +162,7 @@ const BandejaTareas = () => {
             </svg>
           </div>
           <h3 style={{ color: 'var(--text-main)', marginBottom: '8px' }}>
-            No hay tareas pendientes
+            {filtroEstado === 'todas' ? 'No hay tareas pendientes' : `No hay tareas con estado "${filtroEstado}"`}
           </h3>
           <p style={{ color: 'var(--text-muted)' }}>
             Las tareas que requieran tu atencion apareceran aqui
@@ -130,7 +170,7 @@ const BandejaTareas = () => {
         </div>
       ) : (
         <div className="tareas-lista">
-          {tareas.map(tarea => (
+          {tareasFiltradas.map(tarea => (
             <div 
               key={tarea.id} 
               className={`tarea-card ${tareaExpandida === tarea.id ? 'expandida' : ''}`}
@@ -228,7 +268,13 @@ const BandejaTareas = () => {
                       </div>
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                      <button 
+                        className="btn btn-secondary"
+                        onClick={() => navigate(`/expedientes?abrir=${tarea.expediente_id}`)}
+                      >
+                        Ver Expediente
+                      </button>
                       <button 
                         className="btn btn-secondary"
                         onClick={() => setTareaExpandida(null)}

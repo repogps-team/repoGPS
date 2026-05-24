@@ -87,7 +87,7 @@ const logoutIcon = (
   </svg>
 )
 
-const Sidebar = ({ onLogout, menuItems = [], titulos = {}, usuario = {}, sidebarOpen = false, onNavClick, sidebarCollapsed = false, onToggleCollapse }) => {
+const Sidebar = ({ onLogout, menuItems = [], titulos = {}, usuario = {}, sidebarOpen = false, onNavClick, sidebarCollapsed = false, onToggleCollapse, tareasPendientes = 0 }) => {
   const location = useLocation()
 
   // Categorías para el menú admin
@@ -161,7 +161,17 @@ const Sidebar = ({ onLogout, menuItems = [], titulos = {}, usuario = {}, sidebar
                   title={sidebarCollapsed ? (titulos[id] || id) : undefined}
                 >
                   <span className="nav-item-icon">{icons[id] || null}</span>
-                  {!sidebarCollapsed && <span className="nav-item-label">{titulos[id] || id}</span>}
+                  {!sidebarCollapsed && (
+                    <span className="nav-item-label">
+                      {titulos[id] || id}
+                      {id === 'bandeja' && tareasPendientes > 0 && (
+                        <span className="nav-badge">{tareasPendientes}</span>
+                      )}
+                    </span>
+                  )}
+                  {sidebarCollapsed && id === 'bandeja' && tareasPendientes > 0 && (
+                    <span className="nav-badge nav-badge--collapsed">{tareasPendientes}</span>
+                  )}
                 </Link>
               )
             })}

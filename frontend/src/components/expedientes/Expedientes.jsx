@@ -7,7 +7,7 @@ import { useApi } from '../../hooks/useApi'
 import { useContratistas } from '../../hooks/useContratistas'
 import ExpedienteDetalle from './ExpedienteDetalle'
 
-const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicial = 'todos' }) => {
+const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicial = 'todos', abrirExpedienteId = null }) => {
   const { get } = useApi()
   const {
     expedientes,
@@ -65,6 +65,16 @@ const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicia
   useEffect(() => {
     Promise.all([cargarExpedientes(), cargarProcesos(), cargarDisciplinas(), cargarCategorias(), cargarContratistas()])
   }, [cargarExpedientes, cargarProcesos, cargarDisciplinas, cargarCategorias, cargarContratistas])
+
+  // Abrir expediente desde query param (HU-10: desde bandeja)
+  useEffect(() => {
+    if (abrirExpedienteId && expedientes.length > 0) {
+      const exp = expedientes.find(e => e.id === abrirExpedienteId)
+      if (exp) {
+        abrirDetalle(exp)
+      }
+    }
+  }, [abrirExpedienteId, expedientes, abrirDetalle])
 
 
   // Cargar áreas cuando se selecciona un contratista

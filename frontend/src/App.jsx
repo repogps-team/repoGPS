@@ -65,16 +65,20 @@ const rutaASeccion = {
   '/reportes': 'reportes'
 }
 
-// Wrapper para Expedientes que lee filtros de la URL
+// Wrapper para Expedientes que lee filtros + abrir expediente de la URL
 const ExpedientesWrapper = ({ user }) => {
   const [searchParams] = useSearchParams()
   const filtroEstadoInicial = searchParams.get('estado') || 'todos'
   const filtroSlaInicial = searchParams.get('sla') || 'todos'
+  const abrirExpedienteId = searchParams.get('abrir')
+    ? parseInt(searchParams.get('abrir'), 10)
+    : null
 
   return <ExpedientesPanel
     user={user}
     filtroEstadoInicial={filtroEstadoInicial}
     filtroSlaInicial={filtroSlaInicial}
+    abrirExpedienteId={abrirExpedienteId}
   />
 }
 
@@ -83,6 +87,29 @@ const SidebarLayout = () => {
   const { user, logout } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [tareasPendientes, setTareasPendientes] = useState(0)
+
+  // Cargar contador de tareas pendientes para el badge del sidebar
+  useEffect(() => {
+    if (!user?.id) return
+    const fetchCount = async () => {
+      try {
+        const token = localStorage.getItem('token')
+        const baseUrl = import.meta.env.VITE_API_URL || ''
+        const params = new URLSearchParams({ usuario_id: user.id })
+        if (user.area_id) params.append('area_id', user.area_id)
+        if (user.rol_id) params.append('rol_id', user.rol_id)
+        const res = await fetch(`${baseUrl}/api/tareas/mis-tareas?${params}`, {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setTareasPendientes(Array.isArray(data) ? data.filter(t => t.estado === 'pendiente').length : 0)
+        }
+      } catch { /* silently fail */ }
+    }
+    fetchCount()
+  }, [user])
 
   const toggleSidebar = () => setSidebarOpen(prev => !prev)
   const closeSidebar = () => setSidebarOpen(false)
@@ -129,6 +156,7 @@ const SidebarLayout = () => {
         onNavClick={closeSidebar}
         sidebarCollapsed={sidebarCollapsed}
         onToggleCollapse={toggleCollapse}
+        tareasPendientes={tareasPendientes}
       />
       <Content
         titulo={titulos[seccionActual]}
