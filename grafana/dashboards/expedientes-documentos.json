@@ -30,7 +30,7 @@
         "includeAll": true,
         "allValue": 0,
         "multi": false,
-        "query": "SELECT id as __value, nombre as __text FROM areas_mirror WHERE estado_activo = true AND (${contratista} = 0 OR contratista_id = ${contratista}) ORDER BY nombre",
+        "query": "SELECT id as __value, nombre as __text FROM areas_mirror WHERE estado_activo = true AND (0 IN (${contratista:csv}) OR contratista_id IN (${contratista:csv})) ORDER BY nombre",
         "current": { "text": "All", "value": 0 }
       },
       {
@@ -42,7 +42,7 @@
         "includeAll": true,
         "allValue": 0,
         "multi": false,
-        "query": "SELECT id as __value, nombre as __text FROM procesos WHERE estado_activo = true AND (${area} = 0 OR area_id = ${area}) ORDER BY nombre",
+        "query": "SELECT id as __value, nombre as __text FROM procesos WHERE estado_activo = true AND (0 IN (${area:csv}) OR area_id IN (${area:csv})) ORDER BY nombre",
         "current": { "text": "All", "value": 0 }
       },
       {
@@ -71,7 +71,7 @@
         {
           "refId": "A",
           "format": "table",
-          "rawSql": "SELECT cm.nombre AS categoria, COUNT(d.id) AS total FROM documentos d JOIN expedientes e ON d.expediente_id = e.id LEFT JOIN procesos p ON e.proceso_id = p.id LEFT JOIN subtipos_mirror sm ON e.subtipo_id = sm.id LEFT JOIN categorias_mirror cm ON sm.categoria_id = cm.id WHERE d.estado_activo = true AND e.estado_activo = true AND (${area} = 0 OR p.area_id = ${area}) AND (${proceso} = 0 OR e.proceso_id = ${proceso}) AND ('${fecha_desde}' = '' OR d.fecha_upload::date >= '${fecha_desde}'::date) AND ('${fecha_hasta}' = '' OR d.fecha_upload::date <= '${fecha_hasta}'::date) GROUP BY cm.nombre ORDER BY total DESC"
+          "rawSql": "SELECT cm.nombre AS categoria, COUNT(d.id) AS total FROM documentos d JOIN expedientes e ON d.expediente_id = e.id LEFT JOIN procesos p ON e.proceso_id = p.id LEFT JOIN subtipos_mirror sm ON e.subtipo_id = sm.id LEFT JOIN categorias_mirror cm ON sm.categoria_id = cm.id WHERE d.estado_activo = true AND e.estado_activo = true AND (0 IN (${area:csv}) OR p.area_id IN (${area:csv})) AND (0 IN (${proceso:csv}) OR e.proceso_id IN (${proceso:csv})) AND ('${fecha_desde}' = '' OR d.fecha_upload::date >= '${fecha_desde}'::date) AND ('${fecha_hasta}' = '' OR d.fecha_upload::date <= '${fecha_hasta}'::date) GROUP BY cm.nombre ORDER BY total DESC"
         }
       ]
     },
@@ -84,7 +84,7 @@
         {
           "refId": "A",
           "format": "table",
-          "rawSql": "SELECT e.titulo AS expediente, COUNT(d.id) AS total FROM documentos d JOIN expedientes e ON d.expediente_id = e.id LEFT JOIN procesos p ON e.proceso_id = p.id WHERE d.estado_activo = true AND e.estado_activo = true AND (${area} = 0 OR p.area_id = ${area}) AND (${proceso} = 0 OR e.proceso_id = ${proceso}) AND ('${fecha_desde}' = '' OR d.fecha_upload::date >= '${fecha_desde}'::date) AND ('${fecha_hasta}' = '' OR d.fecha_upload::date <= '${fecha_hasta}'::date) GROUP BY e.titulo ORDER BY total DESC LIMIT 10"
+          "rawSql": "SELECT e.titulo AS expediente, COUNT(d.id) AS total FROM documentos d JOIN expedientes e ON d.expediente_id = e.id LEFT JOIN procesos p ON e.proceso_id = p.id WHERE d.estado_activo = true AND e.estado_activo = true AND (0 IN (${area:csv}) OR p.area_id IN (${area:csv})) AND (0 IN (${proceso:csv}) OR e.proceso_id IN (${proceso:csv})) AND ('${fecha_desde}' = '' OR d.fecha_upload::date >= '${fecha_desde}'::date) AND ('${fecha_hasta}' = '' OR d.fecha_upload::date <= '${fecha_hasta}'::date) GROUP BY e.titulo ORDER BY total DESC LIMIT 10"
         }
       ]
     }
