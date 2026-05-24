@@ -963,19 +963,28 @@ app.post("/api/expedientes", async (req, res) => {
     // Validar que disciplina y proceso pertenezcan a la misma área
     if (disciplina_id && proceso_id) {
       try {
-        const [disciplinaRes, procesoRes] = await Promise.all([
-          fetch(`${MS_MANTENEDOR_URL}/api/disciplinas/${disciplina_id}`),
-          fetch(`${MS_MANTENEDOR_URL}/api/procesos/${proceso_id}`)
-        ]);
+        // Disciplina está en ms-mantenedor
+        const disciplinaRes = await fetch(`${MS_MANTENEDOR_URL}/api/disciplinas/${disciplina_id}`);
 
-        if (!disciplinaRes.ok || !procesoRes.ok) {
+        if (!disciplinaRes.ok) {
           return res.status(400).json({ error: "Disciplina o proceso inválido" });
         }
 
         const disciplina = await disciplinaRes.json();
-        const proceso = await procesoRes.json();
 
-        if (!disciplina?.area_id || !proceso?.area_id || disciplina.area_id !== proceso.area_id) {
+        // Proceso está en nuestra propia DB (ms-expedientes)
+        const procesoResult = await pool.query(
+          "SELECT id, area_id FROM procesos WHERE id = $1 AND estado_activo = true",
+          [proceso_id]
+        );
+
+        if (procesoResult.rows.length === 0) {
+          return res.status(400).json({ error: "Disciplina o proceso inválido" });
+        }
+
+        const proceso = procesoResult.rows[0];
+
+        if (!disciplina?.area_id || disciplina.area_id !== proceso.area_id) {
           return res.status(400).json({ error: "La disciplina y el proceso deben pertenecer a la misma área" });
         }
       } catch (err) {
