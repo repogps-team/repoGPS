@@ -77,6 +77,16 @@ export const useExpedientes = () => {
     return data
   }, [post, cargarExpedientes])
 
+  const rechazarExpediente = useCallback(async (id, observacion) => {
+    const data = await post(`/api/expedientes/${id}/rechazar`, { observacion })
+    if (data?.expediente) {
+      setExpedientes(prev => prev.map(e => (e.id === data.expediente.id ? data.expediente : e)))
+    } else if (data) {
+      await cargarExpedientes()
+    }
+    return data
+  }, [post, cargarExpedientes])
+
   const actualizarFechaTermino = useCallback(async (id, fecha_termino) => {
     const data = await put(`/api/expedientes/${id}`, { fecha_termino })
     if (data) {
@@ -110,6 +120,7 @@ export const useExpedientes = () => {
     cerrarDetalle,
     avanzarExpediente,
     devolverExpediente,
+    rechazarExpediente,
     actualizarFechaTermino,
     refreshDocumentos
   }

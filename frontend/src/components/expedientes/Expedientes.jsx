@@ -20,6 +20,7 @@ const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicia
     cerrarDetalle,
     avanzarExpediente,
     devolverExpediente,
+    rechazarExpediente,
     actualizarFechaTermino,
     refreshDocumentos
   } = useExpedientes()
@@ -467,6 +468,7 @@ const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicia
           onCerrar={cerrarDetalle}
           onAvanzar={avanzarExpediente}
           onDevolver={devolverExpediente}
+          onRechazar={rechazarExpediente}
           onDocumentoUploaded={handleDocumentoUploaded}
           onActualizarFechaTermino={async (id, fecha_termino) => {
             const updated = await actualizarFechaTermino(id, fecha_termino)

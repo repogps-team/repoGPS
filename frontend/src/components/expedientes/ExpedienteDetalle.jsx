@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Fragment } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { UploadModal } from '../upload/UploadModal'
 import { DocumentTimeline } from '../upload/DocumentTimeline'
@@ -12,6 +12,7 @@ const ExpedienteDetalle = ({
   onCerrar,
   onAvanzar,
   onDevolver,
+  onRechazar,
   onActualizarFechaTermino,
   onDocumentoUploaded,
   esAdmin = false
@@ -39,6 +40,7 @@ const ExpedienteDetalle = ({
   const [expandedFormDetail, setExpandedFormDetail] = useState(null) // schema + respuestas completas
   const [viewingResponse, setViewingResponse] = useState(null)
   const [transicionesDisponibles, setTransicionesDisponibles] = useState([])
+  const [etapasProceso, setEtapasProceso] = useState([])
 
   const handleAvanzar = async () => {
     const observacion = prompt('Observación (opcional):')
@@ -57,6 +59,19 @@ const ExpedienteDetalle = ({
     if (observacion !== null) {
       try {
         await onDevolver(expediente.id, observacion)
+        onCerrar()
+      } catch (err) {
+        alert(err.message)
+      }
+    }
+  }
+
+  const handleRechazar = async () => {
+    if (!window.confirm('¿Estás seguro de rechazar este expediente? Esta acción no se puede deshacer.')) return
+    const observacion = prompt('Motivo del rechazo (opcional):')
+    if (observacion !== null) {
+      try {
+        await onRechazar(expediente.id, observacion)
         onCerrar()
       } catch (err) {
         alert(err.message)
@@ -90,6 +105,21 @@ const ExpedienteDetalle = ({
         }
       }
       cargarTransiciones()
+
+      // HU-12: Cargar etapas del proceso para el timeline
+      if (expediente.proceso_id) {
+        const cargarEtapas = async () => {
+          try {
+            const data = await get(`/api/etapas-proceso/proceso/${expediente.proceso_id}`)
+            if (Array.isArray(data)) {
+              setEtapasProceso(data)
+            }
+          } catch (err) {
+            console.error('Error al cargar etapas del proceso:', err)
+          }
+        }
+        cargarEtapas()
+      }
     }
   }, [expediente?.id, get])
 
@@ -120,6 +150,30 @@ const ExpedienteDetalle = ({
 
   const handleStartRespond = (form) => {
     navigate(`/expedientes/${expediente.id}/responder/${form.id}`)
+  }
+
+  // HU-12: Determinar estado de cada etapa para el timeline
+  const getEtapaStatus = (etapa) => {
+    if (!expediente?.etapa_actual_id || etapasProceso.length === 0) return 'pending'
+    const etapaActual = etapasProceso.find(e => e.id === expediente.etapa_actual_id)
+    if (!etapaActual) return 'pending'
+    // Si la etapa actual es "Rechazado", mostrar como rechazado
+    if (etapaActual.nombre?.toLowerCase() === 'rechazado') {
+      if (etapa.id === expediente.etapa_actual_id) return 'rejected'
+      if (etapa.orden < etapaActual.orden) return 'completed'
+      return 'skipped'
+    }
+    if (etapa.orden < etapaActual.orden) return 'completed'
+    if (etapa.id === expediente.etapa_actual_id) return 'current'
+    return 'pending'
+  }
+
+  const statusIcon = {
+    completed: 'check_circle',
+    current: 'radio_button_checked',
+    rejected: 'cancel',
+    skipped: 'radio_button_unchecked',
+    pending: 'radio_button_unchecked'
   }
 
   if (!expediente) return null
@@ -213,11 +267,37 @@ const ExpedienteDetalle = ({
               )}
             </div>
 
+            {/* HU-12: Timeline de etapas del proceso */}
+            {etapasProceso.length > 0 && (
+              <div className="exp-section">
+                <h4>Progreso del Proceso</h4>
+                <div className="timeline">
+                  {etapasProceso.map((etapa, index) => {
+                    const status = getEtapaStatus(etapa)
+                    return (
+                      <Fragment key={etapa.id}>
+                        <div className={`timeline-step ${status}`}>
+                          <div className="timeline-icon-row">
+                            <span className="material-icons">{statusIcon[status]}</span>
+                            {index < etapasProceso.length - 1 && (
+                              <span className={`timeline-connector timeline-connector--${status === 'completed' ? 'completed' : 'pending'}`} />
+                            )}
+                          </div>
+                          <div className="timeline-label">{etapa.nombre}</div>
+                        </div>
+                      </Fragment>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="exp-actions">
               {transicionesDisponibles.length > 0 || esAdmin ? (
                 <>
                   <button className="btn btn-primary" onClick={handleAvanzar}>Avanzar</button>
                   <button className="btn btn-secondary" onClick={handleDevolver}>Devolver</button>
+                  <button className="btn btn-danger" onClick={handleRechazar}>Rechazar</button>
                 </>
               ) : (
                 <span className="muted" style={{ fontSize: '0.85rem', padding: '8px 0', display: 'inline-block' }}>
