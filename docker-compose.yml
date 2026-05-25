@@ -7,6 +7,7 @@ services:
   db:
     image: postgres:15
     container_name: db_usuarios
+    mem_limit: 256m
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password123
@@ -23,6 +24,7 @@ services:
   db_mantenedor:
     image: postgres:15
     container_name: db_mantenedor
+    mem_limit: 256m
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password123
@@ -39,6 +41,7 @@ services:
   db_expedientes:
     image: postgres:15
     container_name: db_expedientes
+    mem_limit: 256m
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password123
@@ -55,6 +58,7 @@ services:
   ms-usuarios:
     image: ghcr.io/repogps-team/repogps/repogps-ms-usuarios:latest
     container_name: ms-usuarios
+    mem_limit: 256m
     environment:
       - NODE_OPTIONS=--max-old-space-size=256
       - DB_USER=postgres
@@ -76,6 +80,7 @@ services:
   ms-mantenedor:
     image: ghcr.io/repogps-team/repogps/repogps-ms-mantenedor:latest
     container_name: ms-mantenedor
+    mem_limit: 256m
     environment:
       - DB_USER=postgres
       - DB_HOST=db_mantenedor
@@ -94,6 +99,7 @@ services:
   garage-hq:
     image: dxflrs/garage:v2.3.0
     container_name: garage-hq
+    mem_limit: 256m
     environment:
       - GARAGE_DEFAULT_ACCESS_KEY=GKadmin01
       - GARAGE_DEFAULT_SECRET_KEY=changeme1234567890
@@ -112,6 +118,7 @@ services:
   ms-expedientes:
     image: ghcr.io/repogps-team/repogps/repogps-ms-expedientes:latest
     container_name: ms-expedientes
+    mem_limit: 256m
     expose:
       - "3002"
     environment:
@@ -139,6 +146,7 @@ services:
   frontend:
     image: ghcr.io/repogps-team/repogps/repogps-frontend:latest
     container_name: frontend-ui
+    mem_limit: 256m
     environment:
       - VITE_API_USUARIOS_URL=http://nginx:80
     networks:
@@ -149,6 +157,7 @@ services:
   # ============================================
   nginx:
     image: nginx:alpine
+    mem_limit: 256m
     ports:
       - "8045:8045"
     volumes:
@@ -167,6 +176,7 @@ services:
   alertmanager:
     image: prom/alertmanager:v0.27.0
     container_name: alertmanager
+    mem_limit: 256m
     environment:
       - ALERTMANAGER_DISCORD_WEBHOOK_URL=${ALERTMANAGER_DISCORD_WEBHOOK_URL}
     volumes:
@@ -188,6 +198,7 @@ services:
   prometheus:
     image: prom/prometheus:v2.54.1
     container_name: prometheus
+    mem_limit: 256m
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./prometheus/rules:/etc/prometheus/rules:ro
@@ -212,6 +223,7 @@ services:
   grafana:
     image: grafana/grafana:10.4.5
     container_name: grafana
+    mem_limit: 256m
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
@@ -233,6 +245,7 @@ services:
   node-exporter:
     image: prom/node-exporter:v1.8.2
     container_name: node-exporter
+    mem_limit: 256m
     command:
       - "--path.procfs=/host/proc"
       - "--path.sysfs=/host/sys"
@@ -247,6 +260,7 @@ services:
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter:v0.15.0
     container_name: postgres-exporter
+    mem_limit: 256m
     environment:
       - DATA_SOURCE_NAME=postgresql://postgres:password123@db:5432/db_usuarios?sslmode=disable
     depends_on:
@@ -257,6 +271,7 @@ services:
   postgres-exporter-mantenedor:
     image: prometheuscommunity/postgres-exporter:v0.15.0
     container_name: postgres-exporter-mantenedor
+    mem_limit: 256m
     environment:
       - DATA_SOURCE_NAME=postgresql://postgres:password123@db_mantenedor:5432/db_mantenedor?sslmode=disable
     depends_on:
@@ -267,6 +282,7 @@ services:
   postgres-exporter-expedientes:
     image: prometheuscommunity/postgres-exporter:v0.15.0
     container_name: postgres-exporter-expedientes
+    mem_limit: 256m
     environment:
       - DATA_SOURCE_NAME=postgresql://postgres:password123@db_expedientes:5432/db_expedientes?sslmode=disable
     depends_on:
@@ -277,6 +293,7 @@ services:
   nginx-exporter:
     image: nginx/nginx-prometheus-exporter:1.1.0
     container_name: nginx-exporter
+    mem_limit: 256m
     command:
       - "-nginx.scrape-uri=http://nginx:8045/nginx_status"
     depends_on:
