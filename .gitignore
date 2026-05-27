@@ -39,4 +39,3 @@ docker-compose.local.yml
 nginx/Dockerfile
 nginx/nginx.conf
 .vercel
-.env*

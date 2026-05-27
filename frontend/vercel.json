@@ -3,6 +3,10 @@
     {
       "source": "/api/:path*",
       "destination": "http://pacheco.chillan.ubiobio.cl:8045/api/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
