@@ -67,3 +67,27 @@ scrape_configs:
     static_configs:
       - targets:
           - ms-expedientes:3002
+
+  # ============================================
+  # Blackbox HTTP probes (health checks reales)
+  # ============================================
+  - job_name: blackbox-http
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+          - http://nginx:8045/nginx_status
+          - http://frontend:80
+          - http://grafana:3000/grafana/
+          - http://alertmanager:9093/alertmanager/-/healthy
+          - http://ms-usuarios:3000/metrics
+          - http://ms-mantenedor:3001/metrics
+          - http://ms-expedientes:3002/metrics
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115

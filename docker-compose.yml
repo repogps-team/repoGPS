@@ -301,6 +301,18 @@ services:
     networks:
       - app-network
 
+  # ============================================
+  # Blackbox Exporter (health checks HTTP reales)
+  # ============================================
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.25.0
+    container_name: blackbox-exporter
+    mem_limit: 256m
+    volumes:
+      - ./prometheus/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
+    networks:
+      - app-network
+
 volumes:
   pgdata_usuarios:
   pgdata_mantenedor:
