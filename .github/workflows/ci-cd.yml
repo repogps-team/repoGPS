@@ -173,11 +173,14 @@ jobs:
             echo "$GITHUB_TOKEN" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             
             docker-compose pull
-            
-            docker-compose down
-            
+
+            docker-compose down --remove-orphans
+
             docker system prune -f
-            
-            docker-compose up -d
-            
+
+            docker-compose up -d --force-recreate
+
             docker image prune -a -f
+
+            curl -fsS http://localhost:8045/grafana/ >/dev/null
+            curl -fsS http://localhost:8045/prometheus/targets >/dev/null

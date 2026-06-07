@@ -8,6 +8,7 @@ services:
     image: postgres:15
     container_name: db_usuarios
     mem_limit: 256m
+    restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password123
@@ -15,6 +16,12 @@ services:
     volumes:
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
       - pgdata_usuarios:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d db_usuarios"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     networks:
       - app-network
 
@@ -25,6 +32,7 @@ services:
     image: postgres:15
     container_name: db_mantenedor
     mem_limit: 256m
+    restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password123
@@ -32,6 +40,12 @@ services:
     volumes:
       - ./database/init_mantenedor.sql:/docker-entrypoint-initdb.d/init_mantenedor.sql
       - pgdata_mantenedor:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d db_mantenedor"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     networks:
       - app-network
 
@@ -42,6 +56,7 @@ services:
     image: postgres:15
     container_name: db_expedientes
     mem_limit: 256m
+    restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password123
@@ -49,6 +64,12 @@ services:
     volumes:
       - ./database/init_expedientes.sql:/docker-entrypoint-initdb.d/init_expedientes.sql
       - pgdata_expedientes:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d db_expedientes"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     networks:
       - app-network
 
@@ -59,6 +80,7 @@ services:
     image: ghcr.io/repogps-team/repogps/repogps-ms-usuarios:latest
     container_name: ms-usuarios
     mem_limit: 256m
+    restart: unless-stopped
     environment:
       - NODE_OPTIONS=--max-old-space-size=256
       - DB_USER=postgres
@@ -71,6 +93,12 @@ services:
       - db
       - db_mantenedor
       - ms-mantenedor
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:3000/metrics',res=>{process.exit(res.statusCode===200?0:1)}).on('error',()=>process.exit(1))\""]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - app-network
 
@@ -81,6 +109,7 @@ services:
     image: ghcr.io/repogps-team/repogps/repogps-ms-mantenedor:latest
     container_name: ms-mantenedor
     mem_limit: 256m
+    restart: unless-stopped
     environment:
       - DB_USER=postgres
       - DB_HOST=db_mantenedor
@@ -90,6 +119,12 @@ services:
       - PORT=3001
     depends_on:
       - db_mantenedor
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:3001/metrics',res=>{process.exit(res.statusCode===200?0:1)}).on('error',()=>process.exit(1))\""]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - app-network
 
@@ -100,6 +135,7 @@ services:
     image: dxflrs/garage:v2.3.0
     container_name: garage-hq
     mem_limit: 256m
+    restart: unless-stopped
     environment:
       - GARAGE_DEFAULT_ACCESS_KEY=GKadmin01
       - GARAGE_DEFAULT_SECRET_KEY=changeme1234567890
@@ -119,6 +155,7 @@ services:
     image: ghcr.io/repogps-team/repogps/repogps-ms-expedientes:latest
     container_name: ms-expedientes
     mem_limit: 256m
+    restart: unless-stopped
     expose:
       - "3002"
     environment:
@@ -137,6 +174,12 @@ services:
       - db_expedientes
       - ms-mantenedor
       - garage-hq
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:3002/metrics',res=>{process.exit(res.statusCode===200?0:1)}).on('error',()=>process.exit(1))\""]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - app-network
 
@@ -147,8 +190,15 @@ services:
     image: ghcr.io/repogps-team/repogps/repogps-frontend:latest
     container_name: frontend-ui
     mem_limit: 256m
+    restart: unless-stopped
     environment:
       - VITE_API_USUARIOS_URL=http://nginx:80
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:80/ >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - app-network
 
@@ -158,6 +208,7 @@ services:
   nginx:
     image: nginx:alpine
     mem_limit: 256m
+    restart: unless-stopped
     ports:
       - "8045:8045"
     volumes:
@@ -167,6 +218,12 @@ services:
       - ms-usuarios
       - ms-mantenedor
       - ms-expedientes
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8045/nginx_status >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     networks:
       - app-network
 
@@ -177,6 +234,7 @@ services:
     image: prom/alertmanager:v0.27.0
     container_name: alertmanager
     mem_limit: 256m
+    restart: unless-stopped
     environment:
       - ALERTMANAGER_DISCORD_WEBHOOK_URL=${ALERTMANAGER_DISCORD_WEBHOOK_URL}
     volumes:
@@ -192,6 +250,12 @@ services:
           --config.file=/tmp/alertmanager.yml \
           --storage.path=/alertmanager \
           --web.external-url=http://localhost:9093/alertmanager
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9093/-/healthy >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     networks:
       - app-network
 
@@ -199,6 +263,7 @@ services:
     image: prom/prometheus:v2.54.1
     container_name: prometheus
     mem_limit: 256m
+    restart: unless-stopped
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./prometheus/rules:/etc/prometheus/rules:ro
@@ -217,6 +282,12 @@ services:
       - postgres-exporter-mantenedor
       - postgres-exporter-expedientes
       - nginx-exporter
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9090/-/healthy >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     networks:
       - app-network
 
@@ -224,6 +295,7 @@ services:
     image: grafana/grafana:10.4.5
     container_name: grafana
     mem_limit: 256m
+    restart: unless-stopped
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
@@ -239,6 +311,12 @@ services:
       - ./grafana/dashboards:/etc/grafana/custom-dashboards:ro
     depends_on:
       - prometheus
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - app-network
 
@@ -246,6 +324,7 @@ services:
     image: prom/node-exporter:v1.8.2
     container_name: node-exporter
     mem_limit: 256m
+    restart: unless-stopped
     command:
       - "--path.procfs=/host/proc"
       - "--path.sysfs=/host/sys"
@@ -261,6 +340,7 @@ services:
     image: prometheuscommunity/postgres-exporter:v0.15.0
     container_name: postgres-exporter
     mem_limit: 256m
+    restart: unless-stopped
     environment:
       - DATA_SOURCE_NAME=postgresql://postgres:password123@db:5432/db_usuarios?sslmode=disable
     depends_on:
@@ -272,6 +352,7 @@ services:
     image: prometheuscommunity/postgres-exporter:v0.15.0
     container_name: postgres-exporter-mantenedor
     mem_limit: 256m
+    restart: unless-stopped
     environment:
       - DATA_SOURCE_NAME=postgresql://postgres:password123@db_mantenedor:5432/db_mantenedor?sslmode=disable
     depends_on:
@@ -283,6 +364,7 @@ services:
     image: prometheuscommunity/postgres-exporter:v0.15.0
     container_name: postgres-exporter-expedientes
     mem_limit: 256m
+    restart: unless-stopped
     environment:
       - DATA_SOURCE_NAME=postgresql://postgres:password123@db_expedientes:5432/db_expedientes?sslmode=disable
     depends_on:
@@ -294,6 +376,7 @@ services:
     image: nginx/nginx-prometheus-exporter:1.1.0
     container_name: nginx-exporter
     mem_limit: 256m
+    restart: unless-stopped
     command:
       - "-nginx.scrape-uri=http://nginx:8045/nginx_status"
     depends_on:
@@ -308,6 +391,7 @@ services:
     image: prom/blackbox-exporter:v0.25.0
     container_name: blackbox-exporter
     mem_limit: 256m
+    restart: unless-stopped
     volumes:
       - ./prometheus/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
     networks:
