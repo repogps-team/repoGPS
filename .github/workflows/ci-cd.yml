@@ -205,5 +205,12 @@ jobs:
 
             docker-compose up -d --force-recreate
 
+            for i in $(seq 1 30); do
+              curl -fsS http://localhost:8045/grafana/ >/dev/null && break || sleep 5
+            done
             curl -fsS http://localhost:8045/grafana/ >/dev/null
+
+            for i in $(seq 1 30); do
+              curl -fsS http://localhost:8045/prometheus/targets >/dev/null && break || sleep 5
+            done
             curl -fsS http://localhost:8045/prometheus/targets >/dev/null
