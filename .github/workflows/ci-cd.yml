@@ -205,7 +205,5 @@ jobs:
 
             docker-compose up -d --force-recreate
 
-            docker image prune -a -f
-
             curl -fsS http://localhost:8045/grafana/ >/dev/null
             curl -fsS http://localhost:8045/prometheus/targets >/dev/null
