@@ -102,6 +102,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Configurar Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
+
       - name: Iniciar sesión en GitHub Container Registry
         uses: docker/login-action@v3
         with:
