@@ -251,7 +251,7 @@ services:
           --storage.path=/alertmanager \
           --web.external-url=http://localhost:9093/alertmanager
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9093/-/healthy >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9093/alertmanager/-/healthy >/dev/null || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 5
@@ -283,7 +283,7 @@ services:
       - postgres-exporter-expedientes
       - nginx-exporter
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9090/-/healthy >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9090/prometheus/-/healthy >/dev/null || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 5
