@@ -261,8 +261,8 @@ services:
 
   prometheus:
     image: prom/prometheus:v2.54.1
-    container_name: prometheus
-    mem_limit: 256m
+    container_name: repogps-prometheus
+    mem_limit: 512m
     restart: unless-stopped
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
@@ -293,8 +293,8 @@ services:
 
   grafana:
     image: grafana/grafana:10.4.5
-    container_name: grafana
-    mem_limit: 256m
+    container_name: repogps-grafana
+    mem_limit: 512m
     restart: unless-stopped
     environment:
       - GF_SECURITY_ADMIN_USER=admin
