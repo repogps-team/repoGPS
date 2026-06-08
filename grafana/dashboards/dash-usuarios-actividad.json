@@ -1,0 +1,65 @@
+{
+  "uid": "dash-usuarios-actividad",
+  "title": "Reportes / Usuarios y Actividad",
+  "tags": ["reportes", "usuarios", "actividad"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-30d", "to": "now" },
+  "templating": { "list": [] },
+  "panels": [
+    {
+      "type": "table",
+      "title": "Último Login por Usuario",
+      "datasource": "Auditoria DB",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT usuario_nombre, MAX(fecha) AS ultimo_login, COUNT(*) AS logins_totales FROM audit_events WHERE accion = 'LOGIN' GROUP BY usuario_nombre ORDER BY ultimo_login DESC"
+        }
+      ]
+    },
+    {
+      "type": "piechart",
+      "title": "Usuarios Activos vs Inactivos",
+      "datasource": "Auditoria DB",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT CASE WHEN MAX(fecha) >= NOW() - INTERVAL '30 days' THEN 'Activo' ELSE 'Inactivo' END AS estado, COUNT(DISTINCT usuario_id) AS usuarios FROM audit_events WHERE accion = 'LOGIN' GROUP BY estado"
+        }
+      ]
+    },
+    {
+      "type": "heatmap",
+      "title": "Actividad por Hora del Día",
+      "datasource": "Auditoria DB",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT EXTRACT(HOUR FROM fecha) AS time, COUNT(*) AS value FROM audit_events GROUP BY 1 ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "type": "barchart",
+      "title": "Usuarios por Rol",
+      "datasource": "Usuarios DB",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT r.nombre AS rol, COUNT(u.id) AS total FROM usuarios u JOIN roles r ON u.rol_id = r.id WHERE u.estado_activo = true GROUP BY r.nombre ORDER BY total DESC"
+        }
+      ]
+    }
+  ]
+}

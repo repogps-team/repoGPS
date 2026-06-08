@@ -1,0 +1,92 @@
+{
+  "uid": "dash-comparativa-contratistas",
+  "title": "Reportes / Comparativa Contratistas",
+  "tags": ["reportes", "contratistas", "comparativa"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-30d", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "contratista",
+        "label": "Contratista",
+        "type": "query",
+        "datasource": "Expedientes DB",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": 0,
+        "multi": false,
+        "query": "SELECT id as __value, razon_social as __text FROM contratistas_mirror WHERE estado_activo = true ORDER BY razon_social",
+        "current": { "text": "All", "value": 0 }
+      },
+      {
+        "name": "area",
+        "label": "Área",
+        "type": "query",
+        "datasource": "Expedientes DB",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": 0,
+        "multi": false,
+        "query": "SELECT id as __value, nombre as __text FROM areas_mirror WHERE estado_activo = true AND (0 IN (${contratista:csv}) OR contratista_id IN (${contratista:csv})) ORDER BY nombre",
+        "current": { "text": "All", "value": 0 }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "barchart",
+      "title": "Expedientes por Contratista",
+      "datasource": "Expedientes DB",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT c.razon_social AS contratista, COUNT(e.id) AS total FROM expedientes e JOIN contratistas_mirror c ON e.contratista_id = c.id LEFT JOIN procesos p ON e.proceso_id = p.id WHERE e.estado_activo = true AND (0 IN (${area:csv}) OR p.area_id IN (${area:csv})) AND (0 IN (${contratista:csv}) OR e.contratista_id IN (${contratista:csv})) GROUP BY c.razon_social ORDER BY total DESC"
+        }
+      ]
+    },
+    {
+      "type": "barchart",
+      "title": "Tiempo Promedio por Contratista (días)",
+      "datasource": "Expedientes DB",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT c.razon_social AS contratista, AVG(EXTRACT(EPOCH FROM (COALESCE(e.fecha_termino, now()) - e.fecha_creacion)) / 86400) AS promedio_dias FROM expedientes e JOIN contratistas_mirror c ON e.contratista_id = c.id LEFT JOIN procesos p ON e.proceso_id = p.id WHERE e.estado_activo = true AND (0 IN (${area:csv}) OR p.area_id IN (${area:csv})) AND (0 IN (${contratista:csv}) OR e.contratista_id IN (${contratista:csv})) AND e.fecha_termino IS NOT NULL GROUP BY c.razon_social ORDER BY promedio_dias"
+        }
+      ]
+    },
+    {
+      "type": "barchart",
+      "title": "Documentos por Área",
+      "datasource": "Expedientes DB",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT am.nombre AS area, COUNT(d.id) AS total FROM documentos d JOIN expedientes e ON d.expediente_id = e.id JOIN procesos p ON e.proceso_id = p.id JOIN areas_mirror am ON p.area_id = am.id WHERE d.estado_activo = true AND e.estado_activo = true AND (0 IN (${area:csv}) OR p.area_id IN (${area:csv})) AND (0 IN (${contratista:csv}) OR e.contratista_id IN (${contratista:csv})) GROUP BY am.nombre ORDER BY total DESC"
+        }
+      ]
+    },
+    {
+      "type": "barchart",
+      "title": "Tasa de Aprobación por Área",
+      "datasource": "Expedientes DB",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT am.nombre AS area, ROUND(COUNT(*) FILTER (WHERE ep.tipo_etapa = 'final' OR ep.es_final = true)::numeric / NULLIF(COUNT(*), 0) * 100, 1) AS aprobacion_pct FROM expedientes e JOIN procesos p ON e.proceso_id = p.id JOIN areas_mirror am ON p.area_id = am.id LEFT JOIN etapas_proceso ep ON e.etapa_actual_id = ep.id WHERE e.estado_activo = true AND (0 IN (${area:csv}) OR p.area_id IN (${area:csv})) AND (0 IN (${contratista:csv}) OR e.contratista_id IN (${contratista:csv})) GROUP BY am.nombre ORDER BY aprobacion_pct DESC"
+        }
+      ]
+    }
+  ]
+}

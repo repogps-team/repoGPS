@@ -1,0 +1,144 @@
+{
+  "uid": "dash-formularios",
+  "title": "Reportes / Formularios Dinámicos",
+  "tags": ["reportes", "formularios"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-30d", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "contratista",
+        "label": "Contratista",
+        "type": "query",
+        "datasource": "Expedientes DB",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": 0,
+        "multi": false,
+        "query": "SELECT id as __value, razon_social as __text FROM contratistas_mirror WHERE estado_activo = true ORDER BY razon_social",
+        "current": { "text": "All", "value": 0 }
+      },
+      {
+        "name": "area",
+        "label": "Área",
+        "type": "query",
+        "datasource": "Expedientes DB",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": 0,
+        "multi": false,
+        "query": "SELECT id as __value, nombre as __text FROM areas_mirror WHERE estado_activo = true AND (0 IN (${contratista:csv}) OR contratista_id IN (${contratista:csv})) ORDER BY nombre",
+        "current": { "text": "All", "value": 0 }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Formularios Creados vs Activos",
+      "datasource": "Expedientes DB",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE estado_activo = true) AS activos FROM formularios"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Respuestas Totales",
+      "datasource": "Expedientes DB",
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT COUNT(*) AS total FROM form_responses"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Tasa de Completitud Promedio",
+      "datasource": "Expedientes DB",
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT ROUND(AVG(CASE WHEN completado THEN 100 ELSE 0 END), 1) AS completitud FROM form_responses"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Formularios sin Respuestas",
+      "datasource": "Expedientes DB",
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT COUNT(*) AS total FROM formularios f WHERE f.estado_activo = true AND NOT EXISTS (SELECT 1 FROM form_responses fr WHERE fr.formulario_id = f.id)"
+        }
+      ]
+    },
+    {
+      "type": "barchart",
+      "title": "Respuestas por Formulario",
+      "datasource": "Expedientes DB",
+      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT f.nombre AS formulario, COUNT(fr.id) AS respuestas, COUNT(fr.id) FILTER (WHERE fr.completado = true) AS completadas FROM formularios f LEFT JOIN form_responses fr ON f.id = fr.formulario_id WHERE f.estado_activo = true GROUP BY f.nombre ORDER BY respuestas DESC"
+        }
+      ]
+    },
+    {
+      "type": "barchart",
+      "title": "Tasa de Completitud por Formulario",
+      "datasource": "Expedientes DB",
+      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT f.nombre AS formulario, ROUND(COUNT(*) FILTER (WHERE fr.completado = true)::numeric / NULLIF(COUNT(*), 0) * 100, 1) AS completitud_pct FROM formularios f LEFT JOIN form_responses fr ON f.id = fr.formulario_id WHERE f.estado_activo = true GROUP BY f.nombre ORDER BY completitud_pct DESC"
+        }
+      ]
+    },
+    {
+      "type": "barchart",
+      "title": "Respuestas por Usuario",
+      "datasource": "Expedientes DB",
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT um.nombre_completo AS usuario, COUNT(fr.id) AS respuestas FROM form_responses fr LEFT JOIN usuarios_mirror um ON fr.usuario_id = um.id GROUP BY um.nombre_completo ORDER BY respuestas DESC"
+        }
+      ]
+    },
+    {
+      "type": "barchart",
+      "title": "Respuestas por Área",
+      "datasource": "Expedientes DB",
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT am.nombre AS area, COUNT(fr.id) AS respuestas FROM form_responses fr LEFT JOIN expedientes e ON fr.expediente_id = e.id LEFT JOIN procesos p ON e.proceso_id = p.id LEFT JOIN areas_mirror am ON p.area_id = am.id GROUP BY am.nombre ORDER BY respuestas DESC"
+        }
+      ]
+    }
+  ]
+}
