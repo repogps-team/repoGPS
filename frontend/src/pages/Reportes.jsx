@@ -63,7 +63,6 @@ export default function Reportes() {
   const [activeAuditTab, setActiveAuditTab] = useState('audit-actividad')
   const [iframeSrc, setIframeSrc] = useState('')
   const [isLoading, setIsLoading] = useState(true)
-  const [hasApplied, setHasApplied] = useState(false)
 
   // Filtros — fecha con defaults, resto vacío (opcional)
   const [areaId, setAreaId] = useState('')
@@ -105,14 +104,6 @@ export default function Reportes() {
     }
   }, [])
 
-  // Auto-load en mount con fechas por defecto
-  useEffect(() => {
-    setHasApplied(true)
-    setIsLoading(true)
-    const src = buildIframeSrc('general', 'audit-actividad', '', '', '', getDefaultFechaDesde(), getDefaultFechaHasta(), '', '')
-    setIframeSrc(src)
-  }, [])
-
   // Construir URL del iframe con filtros como variables de Grafana
   const buildIframeSrc = useCallback((tab, auditTab, area, contratista, proceso, desde, hasta, usuario, etapa) => {
     const dashboardKey = tab === 'auditoria' ? auditTab : tab
@@ -134,6 +125,13 @@ export default function Reportes() {
 
     return `/grafana/d/${uid}?${params.toString()}`
   }, [])
+
+  // Auto-load en mount con fechas por defecto
+  useEffect(() => {
+    setIsLoading(true)
+    const src = buildIframeSrc('general', 'audit-actividad', '', '', '', getDefaultFechaDesde(), getDefaultFechaHasta(), '', '')
+    setIframeSrc(src)
+  }, [buildIframeSrc])
 
   // Detectar cuando Grafana terminó de cargar (same-origin)
   const startPollingDashboard = useCallback(() => {
@@ -185,7 +183,6 @@ export default function Reportes() {
 
   // Aplicar filtros: cargar el iframe con los filtros seleccionados
   const applyFilters = useCallback(() => {
-    setHasApplied(true)
     setIsLoading(true)
     const src = buildIframeSrc(
       activeTab, activeAuditTab, areaId, contratistaId, procesoId, fechaDesde, fechaHasta, usuarioId, etapaId
@@ -204,7 +201,6 @@ export default function Reportes() {
     setFechaHasta(defaultHasta)
     setUsuarioId('')
     setEtapaId('')
-    setHasApplied(true)
     setIsLoading(true)
     const src = buildIframeSrc(activeTab, activeAuditTab, '', '', '', defaultDesde, defaultHasta, '', '')
     setIframeSrc(src)
