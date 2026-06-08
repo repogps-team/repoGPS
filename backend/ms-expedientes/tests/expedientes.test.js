@@ -217,6 +217,11 @@ describe('POST /api/expedientes', () => {
 describe('POST /api/expedientes/:id/avanzar (auth)', () => {
   beforeEach(() => {
     resetMockDb();
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 202 });
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   test('avanza expediente a siguiente etapa (admin bypass)', async () => {

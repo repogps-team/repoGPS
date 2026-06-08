@@ -1212,7 +1212,7 @@ app.post("/api/expedientes/:id/avanzar", authMiddleware, async (req, res) => {
       entidad: "expediente",
       entidad_id: Number(id),
       entidad_nombre: exp?.titulo,
-      valor_nuevo: { etapa_anterior: expediente?.etapa_actual_id, etapa_nueva: avanzarResult.nueva_etapa?.id, observacion },
+      valor_nuevo: { etapa_anterior: exp?.etapa_actual_id, etapa_nueva: avanzarResult.nueva_etapa?.id, observacion },
       ip: req.ip,
       user_agent: req.get("user-agent"),
     });
