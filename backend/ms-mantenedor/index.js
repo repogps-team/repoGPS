@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const { Pool } = require("pg");
 const { metricsHandler, metricsMiddleware, contratistaCreatedTotal, areaCreatedTotal } = require("./src/metrics");
+const { emitAudit } = require("./lib/auditClient");
 
 const app = express();
 app.use(cors());
@@ -93,6 +94,14 @@ app.post("/api/contratistas", async (req, res) => {
     );
     contratistaCreatedTotal.inc();
     res.status(201).json(result.rows[0]);
+
+    emitAudit({
+      accion: "CREATE",
+      entidad: "contratista",
+      entidad_id: result.rows[0].id,
+      entidad_nombre: razon_social,
+      valor_nuevo: { razon_social, rut },
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -119,6 +128,14 @@ app.put("/api/contratistas/:id", async (req, res) => {
       return res.status(404).json({ error: "Contratista no encontrado" });
     }
     res.json(result.rows[0]);
+
+    emitAudit({
+      accion: "UPDATE",
+      entidad: "contratista",
+      entidad_id: Number(id),
+      entidad_nombre: razon_social,
+      valor_nuevo: { razon_social, rut },
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -132,6 +149,12 @@ app.delete("/api/contratistas/:id", async (req, res) => {
       [id]
     );
     res.json({ message: "Contratista eliminado lógicamente" });
+
+    emitAudit({
+      accion: "DEACTIVATE",
+      entidad: "contratista",
+      entidad_id: Number(id),
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -143,6 +166,12 @@ app.patch("/api/contratistas/:id/estado", async (req, res) => {
   try {
     await pool.query("UPDATE contratistas SET estado_activo = $1 WHERE id = $2", [estado_activo, id]);
     res.json({ message: "Estado actualizado correctamente" });
+
+    emitAudit({
+      accion: estado_activo ? "ACTIVATE" : "DEACTIVATE",
+      entidad: "contratista",
+      entidad_id: Number(id),
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -201,6 +230,14 @@ app.post("/api/areas", async (req, res) => {
     );
     areaCreatedTotal.inc();
     res.status(201).json(result.rows[0]);
+
+    emitAudit({
+      accion: "CREATE",
+      entidad: "area",
+      entidad_id: result.rows[0].id,
+      entidad_nombre: nombre,
+      valor_nuevo: { contratista_id, nombre },
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -227,6 +264,14 @@ app.put("/api/areas/:id", async (req, res) => {
       return res.status(404).json({ error: "Área no encontrada" });
     }
     res.json(result.rows[0]);
+
+    emitAudit({
+      accion: "UPDATE",
+      entidad: "area",
+      entidad_id: Number(id),
+      entidad_nombre: nombre,
+      valor_nuevo: { contratista_id, nombre },
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -240,6 +285,12 @@ app.delete("/api/areas/:id", async (req, res) => {
       [id]
     );
     res.json({ message: "Área eliminada lógicamente" });
+
+    emitAudit({
+      accion: "DEACTIVATE",
+      entidad: "area",
+      entidad_id: Number(id),
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -251,6 +302,12 @@ app.patch("/api/areas/:id/estado", async (req, res) => {
   try {
     await pool.query("UPDATE areas SET estado_activo = $1 WHERE id = $2", [estado_activo, id]);
     res.json({ message: "Estado actualizado correctamente" });
+
+    emitAudit({
+      accion: estado_activo ? "ACTIVATE" : "DEACTIVATE",
+      entidad: "area",
+      entidad_id: Number(id),
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -326,6 +383,14 @@ app.get("/api/disciplinas", async (req, res) => {
         [area_id, nombre]
       );
       res.status(201).json(result.rows[0]);
+
+      emitAudit({
+        accion: "CREATE",
+        entidad: "disciplina",
+        entidad_id: result.rows[0].id,
+        entidad_nombre: nombre,
+        valor_nuevo: { area_id, nombre },
+      });
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
@@ -352,6 +417,14 @@ app.get("/api/disciplinas", async (req, res) => {
         return res.status(404).json({ error: "Disciplina no encontrada" });
       }
       res.json(result.rows[0]);
+
+      emitAudit({
+        accion: "UPDATE",
+        entidad: "disciplina",
+        entidad_id: Number(id),
+        entidad_nombre: nombre,
+        valor_nuevo: { area_id, nombre },
+      });
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
@@ -365,6 +438,12 @@ app.delete("/api/disciplinas/:id", async (req, res) => {
       [id]
     );
     res.json({ message: "Disciplina eliminada lógicamente" });
+
+    emitAudit({
+      accion: "DEACTIVATE",
+      entidad: "disciplina",
+      entidad_id: Number(id),
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -376,6 +455,12 @@ app.patch("/api/disciplinas/:id/estado", async (req, res) => {
   try {
     await pool.query("UPDATE disciplinas SET estado_activo = $1 WHERE id = $2", [estado_activo, id]);
     res.json({ message: "Estado actualizado correctamente" });
+
+    emitAudit({
+      accion: estado_activo ? "ACTIVATE" : "DEACTIVATE",
+      entidad: "disciplina",
+      entidad_id: Number(id),
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -459,6 +544,14 @@ app.post("/api/categorias", async (req, res) => {
       [nombre, descripcion]
     );
     res.status(201).json(result.rows[0]);
+
+    emitAudit({
+      accion: "CREATE",
+      entidad: "categoria",
+      entidad_id: result.rows[0].id,
+      entidad_nombre: nombre,
+      valor_nuevo: { nombre, descripcion },
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -485,6 +578,14 @@ app.put("/api/categorias/:id", async (req, res) => {
       return res.status(404).json({ error: "Categoría no encontrada" });
     }
     res.json(result.rows[0]);
+
+    emitAudit({
+      accion: "UPDATE",
+      entidad: "categoria",
+      entidad_id: Number(id),
+      entidad_nombre: nombre,
+      valor_nuevo: { nombre, descripcion },
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -498,6 +599,12 @@ app.delete("/api/categorias/:id", async (req, res) => {
       [id]
     );
     res.json({ message: "Categoría eliminada lógicamente" });
+
+    emitAudit({
+      accion: "DEACTIVATE",
+      entidad: "categoria",
+      entidad_id: Number(id),
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -518,6 +625,12 @@ app.patch("/api/categorias/:id/estado", async (req, res) => {
     
     await client.query('COMMIT');
     res.json({ message: "Estado actualizado correctamente" });
+
+    emitAudit({
+      accion: estado_activo ? "ACTIVATE" : "DEACTIVATE",
+      entidad: "categoria",
+      entidad_id: Number(id),
+    });
   } catch (err) {
     await client.query('ROLLBACK');
     res.status(500).json({ error: err.message });
@@ -596,6 +709,14 @@ app.patch("/api/categorias/:id/estado", async (req, res) => {
         [categoria_id, nombre, descripcion]
       );
       res.status(201).json(result.rows[0]);
+
+      emitAudit({
+        accion: "CREATE",
+        entidad: "subtipo",
+        entidad_id: result.rows[0].id,
+        entidad_nombre: nombre,
+        valor_nuevo: { categoria_id, nombre, descripcion },
+      });
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
@@ -628,6 +749,14 @@ app.patch("/api/categorias/:id/estado", async (req, res) => {
         return res.status(404).json({ error: "Subtipo no encontrado" });
       }
       res.json(result.rows[0]);
+
+      emitAudit({
+        accion: "UPDATE",
+        entidad: "subtipo",
+        entidad_id: Number(id),
+        entidad_nombre: nombre,
+        valor_nuevo: { categoria_id, nombre, descripcion },
+      });
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
@@ -641,6 +770,12 @@ app.patch("/api/categorias/:id/estado", async (req, res) => {
         [id]
       );
       res.json({ message: "Subtipo eliminado lógicamente" });
+
+      emitAudit({
+        accion: "DEACTIVATE",
+        entidad: "subtipo",
+        entidad_id: Number(id),
+      });
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
@@ -652,6 +787,12 @@ app.patch("/api/categorias/:id/estado", async (req, res) => {
     try {
       await pool.query("UPDATE subtipos SET estado_activo = $1 WHERE id = $2", [estado_activo, id]);
       res.json({ message: "Estado actualizado correctamente" });
+
+      emitAudit({
+        accion: estado_activo ? "ACTIVATE" : "DEACTIVATE",
+        entidad: "subtipo",
+        entidad_id: Number(id),
+      });
     } catch (err) {
       res.status(500).json({ error: err.message });
     }

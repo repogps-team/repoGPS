@@ -74,6 +74,30 @@ services:
       - app-network
 
   # ============================================
+  # Base de datos de Auditoría (NUEVA)
+  # ============================================
+  db_auditoria:
+    image: postgres:15
+    container_name: db_auditoria
+    mem_limit: 256m
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password123
+      POSTGRES_DB: db_auditoria
+    volumes:
+      - ./database/init_auditoria.sql:/docker-entrypoint-initdb.d/init_auditoria.sql
+      - pgdata_auditoria:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d db_auditoria"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - app-network
+
+  # ============================================
   # Microservicio Usuarios
   # ============================================
   ms-usuarios:
@@ -184,6 +208,34 @@ services:
       - app-network
 
   # ============================================
+  # Microservicio Auditoría (NUEVO)
+  # ============================================
+  ms-auditoria:
+    image: ghcr.io/repogps-team/repogps/repogps-ms-auditoria:${IMAGE_TAG:-latest}
+    container_name: ms-auditoria
+    mem_limit: 256m
+    restart: unless-stopped
+    expose:
+      - "3004"
+    environment:
+      - DB_USER=postgres
+      - DB_HOST=db_auditoria
+      - DB_NAME=db_auditoria
+      - DB_PASSWORD=password123
+      - DB_PORT=5432
+      - PORT=3004
+    depends_on:
+      - db_auditoria
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:3004/metrics',res=>{process.exit(res.statusCode===200?0:1)}).on('error',()=>process.exit(1))\""]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - app-network
+
+  # ============================================
   # Frontend
   # ============================================
   frontend:
@@ -218,6 +270,7 @@ services:
       - ms-usuarios
       - ms-mantenedor
       - ms-expedientes
+      - ms-auditoria
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8045/nginx_status >/dev/null || exit 1"]
       interval: 30s
@@ -401,6 +454,7 @@ volumes:
   pgdata_usuarios:
   pgdata_mantenedor:
   pgdata_expedientes:
+  pgdata_auditoria:
   prometheus-data:
   grafana-data:
   garage-data:
