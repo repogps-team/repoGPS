@@ -47,6 +47,16 @@ const AUDIT_TABS = [
   { id: 'audit-expediente', label: 'Expediente' },
 ]
 
+function getDefaultFechaDesde() {
+  const d = new Date()
+  d.setDate(d.getDate() - 30)
+  return d.toISOString().split('T')[0]
+}
+
+function getDefaultFechaHasta() {
+  return new Date().toISOString().split('T')[0]
+}
+
 export default function Reportes() {
   const { user } = useAuth()
   const [activeTab, setActiveTab] = useState('general')
@@ -55,12 +65,12 @@ export default function Reportes() {
   const [isLoading, setIsLoading] = useState(true)
   const [hasApplied, setHasApplied] = useState(false)
 
-  // Filtros
+  // Filtros — fecha con defaults, resto vacío (opcional)
   const [areaId, setAreaId] = useState('')
   const [contratistaId, setContratistaId] = useState('')
   const [procesoId, setProcesoId] = useState('')
-  const [fechaDesde, setFechaDesde] = useState('')
-  const [fechaHasta, setFechaHasta] = useState('')
+  const [fechaDesde, setFechaDesde] = useState(getDefaultFechaDesde)
+  const [fechaHasta, setFechaHasta] = useState(getDefaultFechaHasta)
   const [usuarioId, setUsuarioId] = useState('')
   const [etapaId, setEtapaId] = useState('')
 
@@ -93,6 +103,14 @@ export default function Reportes() {
       mountedRef.current = false
       if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current)
     }
+  }, [])
+
+  // Auto-load en mount con fechas por defecto
+  useEffect(() => {
+    setHasApplied(true)
+    setIsLoading(true)
+    const src = buildIframeSrc('general', 'audit-actividad', '', '', '', getDefaultFechaDesde(), getDefaultFechaHasta(), '', '')
+    setIframeSrc(src)
   }, [])
 
   // Construir URL del iframe con filtros como variables de Grafana
@@ -175,50 +193,50 @@ export default function Reportes() {
     setIframeSrc(src)
   }, [activeTab, activeAuditTab, areaId, contratistaId, procesoId, fechaDesde, fechaHasta, usuarioId, etapaId, buildIframeSrc])
 
-  // Limpiar filtros y recargar
+  // Limpiar filtros y recargar con defaults
   const clearAndApply = useCallback(() => {
+    const defaultDesde = getDefaultFechaDesde()
+    const defaultHasta = getDefaultFechaHasta()
     setAreaId('')
     setContratistaId('')
     setProcesoId('')
-    setFechaDesde('')
-    setFechaHasta('')
+    setFechaDesde(defaultDesde)
+    setFechaHasta(defaultHasta)
     setUsuarioId('')
     setEtapaId('')
-    // Aplicar con filtros vacíos
     setHasApplied(true)
     setIsLoading(true)
-    const src = buildIframeSrc(activeTab, activeAuditTab, '', '', '', '', '', '', '')
+    const src = buildIframeSrc(activeTab, activeAuditTab, '', '', '', defaultDesde, defaultHasta, '', '')
     setIframeSrc(src)
   }, [activeTab, activeAuditTab, buildIframeSrc])
 
   // Cambio de tab: cargar el nuevo dashboard con los filtros actuales
   const handleTabChange = useCallback((tabId) => {
     setActiveTab(tabId)
-    if (hasApplied) {
-      setIsLoading(true)
-      const auditTab = tabId === 'auditoria' ? activeAuditTab : null
-      setIframeSrc(buildIframeSrc(
-        tabId, auditTab, areaId, contratistaId, procesoId, fechaDesde, fechaHasta, usuarioId, etapaId
-      ))
-    }
-  }, [hasApplied, activeAuditTab, areaId, contratistaId, procesoId, fechaDesde, fechaHasta, usuarioId, etapaId, buildIframeSrc])
+    setIsLoading(true)
+    const auditTab = tabId === 'auditoria' ? activeAuditTab : null
+    setIframeSrc(buildIframeSrc(
+      tabId, auditTab, areaId, contratistaId, procesoId, fechaDesde, fechaHasta, usuarioId, etapaId
+    ))
+  }, [activeAuditTab, areaId, contratistaId, procesoId, fechaDesde, fechaHasta, usuarioId, etapaId, buildIframeSrc])
 
   // Cambio de sub-tab de auditoría
   const handleAuditTabChange = useCallback((auditTabId) => {
     setActiveAuditTab(auditTabId)
-    if (hasApplied && activeTab === 'auditoria') {
+    if (activeTab === 'auditoria') {
       setIsLoading(true)
       setIframeSrc(buildIframeSrc(
         'auditoria', auditTabId, areaId, contratistaId, procesoId, fechaDesde, fechaHasta, usuarioId, etapaId
       ))
     }
-  }, [hasApplied, activeTab, areaId, contratistaId, procesoId, fechaDesde, fechaHasta, usuarioId, etapaId, buildIframeSrc])
+  }, [activeTab, areaId, contratistaId, procesoId, fechaDesde, fechaHasta, usuarioId, etapaId, buildIframeSrc])
 
   const areasActivas = areas.filter(area => area.estado_activo !== false)
   const contratistasActivos = contratistas.filter(contratista => contratista.estado_activo !== false)
   const procesosActivos = procesos.filter(proceso => proceso.estado_activo !== false)
 
-  const hasFilters = areaId || contratistaId || procesoId || fechaDesde || fechaHasta || usuarioId || etapaId
+  const hasFilters = areaId || contratistaId || procesoId || usuarioId || etapaId
+    || fechaDesde !== getDefaultFechaDesde() || fechaHasta !== getDefaultFechaHasta()
 
   if (!user || user.rol_id !== 1) {
     return <Navigate to="/" replace />
@@ -348,37 +366,20 @@ export default function Reportes() {
 
       {/* Contenedor del iframe + overlay */}
       <div className="reportes-iframe-container">
-        {iframeSrc ? (
-          <>
-            <iframe
-              ref={iframeRef}
-              src={iframeSrc}
-              onLoad={handleIframeLoad}
-              title={`Dashboard ${activeTab}`}
-              className="reportes-iframe"
-              allowFullScreen
-            />
+        <iframe
+          ref={iframeRef}
+          src={iframeSrc}
+          onLoad={handleIframeLoad}
+          title={`Dashboard ${activeTab}`}
+          className="reportes-iframe"
+          allowFullScreen
+        />
 
-            {/* Overlay de carga */}
-            <div className={`reportes-overlay${isLoading ? '' : ' hidden'}`}>
-              {!hasApplied ? (
-                <>
-                  <h2>Filtre los datos para cargar los dashboards de reportes</h2>
-                  <p>Seleccione los filtros que desee y haga clic en "Aplicar filtros"</p>
-                </>
-              ) : (
-                <>
-                  <div className="reportes-spinner" />
-                  <p>Cargando dashboard...</p>
-                </>
-              )}
-            </div>
-          </>
-        ) : (
-          <div className="empty-state">
-            <p>Seleccione los filtros y haga clic en "Aplicar filtros" para comenzar</p>
-          </div>
-        )}
+        {/* Overlay de carga */}
+        <div className={`reportes-overlay${isLoading ? '' : ' hidden'}`}>
+          <div className="reportes-spinner" />
+          <p>Cargando dashboard...</p>
+        </div>
       </div>
     </div>
   )
