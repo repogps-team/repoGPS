@@ -1148,6 +1148,25 @@ app.put("/api/expedientes/:id", async (req, res) => {
   }
 });
 
+// PATCH /api/expedientes/:id/fecha-termino - Actualizar solo fecha de término
+app.patch("/api/expedientes/:id/fecha-termino", authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  const { fecha_termino } = req.body;
+  try {
+    const result = await pool.query(
+      `UPDATE expedientes SET fecha_termino = $1, fecha_actualizacion = CURRENT_TIMESTAMP
+       WHERE id = $2 RETURNING *`,
+      [fecha_termino || null, id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Expediente no encontrado" });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Avanzar expediente a siguiente etapa
 // Al avanzar, genera tareas automaticamente para usuarios con el rol correspondiente
 // POST /api/expedientes/:id/avanzar - Avanzar expediente a siguiente etapa
