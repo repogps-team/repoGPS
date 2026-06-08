@@ -1072,6 +1072,22 @@ button { font-family: inherit; }
   background-color: var(--bg-panel);
 }
 
+.audit-sub-tabs {
+  padding-left: 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.sub-tab-btn {
+  padding: 10px 18px;
+  font-size: 0.85rem;
+  border-bottom: 2px solid transparent;
+}
+
+.sub-tab-btn.active {
+  color: var(--primary-color);
+  border-bottom: 2px solid var(--primary-color);
+}
+
 .search-box input {
   width: 300px;
   border-radius: 20px;

@@ -1,0 +1,65 @@
+{
+  "uid": "audit-actividad",
+  "title": "Auditoría / Actividad del Sistema",
+  "tags": ["auditoria", "actividad"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-30d", "to": "now" },
+  "templating": { "list": [] },
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Eventos por día",
+      "datasource": "Auditoria DB",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT date_trunc('day', fecha) AS time, COUNT(*) AS value FROM audit_events GROUP BY 1 ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "type": "piechart",
+      "title": "Eventos por categoría",
+      "datasource": "Auditoria DB",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT accion, COUNT(*) AS value FROM audit_events GROUP BY accion"
+        }
+      ]
+    },
+    {
+      "type": "barchart",
+      "title": "Top 10 usuarios más activos",
+      "datasource": "Auditoria DB",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT usuario_nombre, COUNT(*) AS value FROM audit_events GROUP BY usuario_nombre ORDER BY COUNT(*) DESC LIMIT 10"
+        }
+      ]
+    },
+    {
+      "type": "heatmap",
+      "title": "Actividad por hora del día",
+      "datasource": "Auditoria DB",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT EXTRACT(HOUR FROM fecha) AS time, COUNT(*) AS value FROM audit_events GROUP BY 1 ORDER BY 1"
+        }
+      ]
+    }
+  ]
+}

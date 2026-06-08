@@ -1,0 +1,62 @@
+{
+  "uid": "audit-expediente",
+  "title": "Auditoría / Auditoría por Expediente",
+  "tags": ["auditoria", "expediente"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-30d", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "expediente_id",
+        "label": "Expediente ID",
+        "type": "textbox",
+        "query": "",
+        "current": { "text": "", "value": "" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "table",
+      "title": "Timeline del expediente",
+      "datasource": "Auditoria DB",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 12 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT fecha, usuario_nombre, accion, entidad, valor_anterior, valor_nuevo FROM audit_events WHERE entidad = 'expediente' AND entidad_id = ${expediente_id} ORDER BY fecha DESC"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Documentos descargados",
+      "datasource": "Auditoria DB",
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT fecha, usuario_nombre, entidad_nombre FROM audit_events WHERE accion = 'DOWNLOAD' AND entidad = 'documento' ORDER BY fecha DESC LIMIT 100"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Formularios respondidos",
+      "datasource": "Auditoria DB",
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT fecha, usuario_nombre, entidad_nombre FROM audit_events WHERE accion = 'RESPOND' ORDER BY fecha DESC LIMIT 100"
+        }
+      ]
+    }
+  ]
+}

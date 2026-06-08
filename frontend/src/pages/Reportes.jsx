@@ -10,6 +10,9 @@ const DASHBOARD_UIDS = {
   productividad: 'expedientes-productividad',
   documentos: 'expedientes-documentos',
   trazabilidad: 'expedientes-trazabilidad',
+  'audit-actividad': 'audit-actividad',
+  'audit-seguridad': 'audit-seguridad',
+  'audit-expediente': 'audit-expediente',
 }
 
 const TABS = [
@@ -17,11 +20,19 @@ const TABS = [
   { id: 'productividad', label: 'Productividad' },
   { id: 'documentos', label: 'Documentos' },
   { id: 'trazabilidad', label: 'Trazabilidad' },
+  { id: 'auditoria', label: 'Auditoría' },
+]
+
+const AUDIT_TABS = [
+  { id: 'audit-actividad', label: 'Actividad' },
+  { id: 'audit-seguridad', label: 'Seguridad' },
+  { id: 'audit-expediente', label: 'Expediente' },
 ]
 
 export default function Reportes() {
   const { user } = useAuth()
   const [activeTab, setActiveTab] = useState('general')
+  const [activeAuditTab, setActiveAuditTab] = useState('audit-actividad')
   const [iframeSrc, setIframeSrc] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [hasApplied, setHasApplied] = useState(false)
@@ -61,8 +72,9 @@ export default function Reportes() {
   }, [])
 
   // Construir URL del iframe con filtros como variables de Grafana
-  const buildIframeSrc = useCallback((tab, area, contratista, proceso, desde, hasta) => {
-    const uid = DASHBOARD_UIDS[tab]
+  const buildIframeSrc = useCallback((tab, auditTab, area, contratista, proceso, desde, hasta) => {
+    const dashboardKey = tab === 'auditoria' ? auditTab : tab
+    const uid = DASHBOARD_UIDS[dashboardKey]
     const params = new URLSearchParams({
       orgId: '1',
       kiosk: 'tv',
@@ -132,10 +144,10 @@ export default function Reportes() {
     setHasApplied(true)
     setIsLoading(true)
     const src = buildIframeSrc(
-      activeTab, areaId, contratistaId, procesoId, fechaDesde, fechaHasta
+      activeTab, activeAuditTab, areaId, contratistaId, procesoId, fechaDesde, fechaHasta
     )
     setIframeSrc(src)
-  }, [activeTab, areaId, contratistaId, procesoId, fechaDesde, fechaHasta, buildIframeSrc])
+  }, [activeTab, activeAuditTab, areaId, contratistaId, procesoId, fechaDesde, fechaHasta, buildIframeSrc])
 
   // Limpiar filtros y recargar
   const clearAndApply = useCallback(() => {
@@ -147,20 +159,32 @@ export default function Reportes() {
     // Aplicar con filtros vacíos
     setHasApplied(true)
     setIsLoading(true)
-    const src = buildIframeSrc(activeTab, '', '', '', '', '')
+    const src = buildIframeSrc(activeTab, activeAuditTab, '', '', '', '', '')
     setIframeSrc(src)
-  }, [activeTab, buildIframeSrc])
+  }, [activeTab, activeAuditTab, buildIframeSrc])
 
   // Cambio de tab: cargar el nuevo dashboard con los filtros actuales
   const handleTabChange = useCallback((tabId) => {
     setActiveTab(tabId)
     if (hasApplied) {
       setIsLoading(true)
+      const auditTab = tabId === 'auditoria' ? activeAuditTab : null
       setIframeSrc(buildIframeSrc(
-        tabId, areaId, contratistaId, procesoId, fechaDesde, fechaHasta
+        tabId, auditTab, areaId, contratistaId, procesoId, fechaDesde, fechaHasta
       ))
     }
-  }, [hasApplied, areaId, contratistaId, procesoId, fechaDesde, fechaHasta, buildIframeSrc])
+  }, [hasApplied, activeAuditTab, areaId, contratistaId, procesoId, fechaDesde, fechaHasta, buildIframeSrc])
+
+  // Cambio de sub-tab de auditoría
+  const handleAuditTabChange = useCallback((auditTabId) => {
+    setActiveAuditTab(auditTabId)
+    if (hasApplied && activeTab === 'auditoria') {
+      setIsLoading(true)
+      setIframeSrc(buildIframeSrc(
+        'auditoria', auditTabId, areaId, contratistaId, procesoId, fechaDesde, fechaHasta
+      ))
+    }
+  }, [hasApplied, activeTab, areaId, contratistaId, procesoId, fechaDesde, fechaHasta, buildIframeSrc])
 
   const areasActivas = areas.filter(area => area.estado_activo !== false)
   const contratistasActivos = contratistas.filter(contratista => contratista.estado_activo !== false)
@@ -194,6 +218,21 @@ export default function Reportes() {
           </button>
         ))}
       </div>
+
+      {/* Sub-tabs de Auditoría */}
+      {activeTab === 'auditoria' && (
+        <div className="tabs audit-sub-tabs">
+          {AUDIT_TABS.map(tab => (
+            <button
+              key={tab.id}
+              className={`tab-btn sub-tab-btn ${activeAuditTab === tab.id ? 'active' : ''}`}
+              onClick={() => handleAuditTabChange(tab.id)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Filtros globales */}
       <div className="reportes-filters">
