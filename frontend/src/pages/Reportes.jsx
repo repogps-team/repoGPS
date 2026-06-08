@@ -57,11 +57,24 @@ function getDefaultFechaHasta() {
   return new Date().toISOString().split('T')[0]
 }
 
+// URL inicial del iframe (default: general, últimos 30 días)
+function getInitialIframeSrc() {
+  const uid = DASHBOARD_UIDS.general
+  const params = new URLSearchParams({
+    orgId: '1',
+    kiosk: 'tv',
+    refresh: '30s',
+    var_fecha_desde: getDefaultFechaDesde(),
+    var_fecha_hasta: getDefaultFechaHasta(),
+  })
+  return `/grafana/d/${uid}?${params.toString()}`
+}
+
 export default function Reportes() {
   const { user } = useAuth()
   const [activeTab, setActiveTab] = useState('general')
   const [activeAuditTab, setActiveAuditTab] = useState('audit-actividad')
-  const [iframeSrc, setIframeSrc] = useState('')
+  const [iframeSrc, setIframeSrc] = useState(getInitialIframeSrc)
   const [isLoading, setIsLoading] = useState(true)
 
   // Filtros — fecha con defaults, resto vacío (opcional)
@@ -125,13 +138,6 @@ export default function Reportes() {
 
     return `/grafana/d/${uid}?${params.toString()}`
   }, [])
-
-  // Auto-load en mount con fechas por defecto
-  useEffect(() => {
-    setIsLoading(true)
-    const src = buildIframeSrc('general', 'audit-actividad', '', '', '', getDefaultFechaDesde(), getDefaultFechaHasta(), '', '')
-    setIframeSrc(src)
-  }, [buildIframeSrc])
 
   // Detectar cuando Grafana terminó de cargar (same-origin)
   const startPollingDashboard = useCallback(() => {
