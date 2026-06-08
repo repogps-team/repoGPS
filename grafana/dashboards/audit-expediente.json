@@ -15,6 +15,18 @@
         "type": "textbox",
         "query": "",
         "current": { "text": "", "value": "" }
+      },
+      {
+        "name": "usuario",
+        "label": "Usuario",
+        "type": "query",
+        "datasource": "Auditoria DB",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": "",
+        "multi": false,
+        "query": "SELECT DISTINCT usuario_nombre as __value, usuario_nombre as __text FROM audit_events WHERE usuario_nombre IS NOT NULL ORDER BY usuario_nombre",
+        "current": { "text": "All", "value": "" }
       }
     ]
   },
@@ -28,7 +40,7 @@
         {
           "refId": "A",
           "format": "table",
-          "rawSql": "SELECT fecha, usuario_nombre, accion, entidad, valor_anterior, valor_nuevo FROM audit_events WHERE entidad = 'expediente' AND entidad_id = ${expediente_id} ORDER BY fecha DESC"
+          "rawSql": "SELECT fecha, usuario_nombre, accion, entidad, valor_anterior, valor_nuevo FROM audit_events WHERE entidad = 'expediente' AND entidad_id = ${expediente_id} AND (0 IN (${usuario:csv}) OR usuario_id IN (${usuario:csv})) ORDER BY fecha DESC"
         }
       ]
     },
@@ -41,7 +53,7 @@
         {
           "refId": "A",
           "format": "table",
-          "rawSql": "SELECT fecha, usuario_nombre, entidad_nombre FROM audit_events WHERE accion = 'DOWNLOAD' AND entidad = 'documento' ORDER BY fecha DESC LIMIT 100"
+          "rawSql": "SELECT fecha, usuario_nombre, entidad_nombre FROM audit_events WHERE accion = 'DOWNLOAD' AND entidad = 'documento' AND (0 IN (${usuario:csv}) OR usuario_id IN (${usuario:csv})) ORDER BY fecha DESC LIMIT 100"
         }
       ]
     },
@@ -54,7 +66,7 @@
         {
           "refId": "A",
           "format": "table",
-          "rawSql": "SELECT fecha, usuario_nombre, entidad_nombre FROM audit_events WHERE accion = 'RESPOND' ORDER BY fecha DESC LIMIT 100"
+          "rawSql": "SELECT fecha, usuario_nombre, entidad_nombre FROM audit_events WHERE accion = 'RESPOND' AND (0 IN (${usuario:csv}) OR usuario_id IN (${usuario:csv})) ORDER BY fecha DESC LIMIT 100"
         }
       ]
     }

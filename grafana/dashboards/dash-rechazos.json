@@ -44,6 +44,18 @@
         "multi": false,
         "query": "SELECT id as __value, nombre as __text FROM procesos WHERE estado_activo = true AND (0 IN (${area:csv}) OR area_id IN (${area:csv})) ORDER BY nombre",
         "current": { "text": "All", "value": 0 }
+      },
+      {
+        "name": "usuario",
+        "label": "Usuario",
+        "type": "query",
+        "datasource": "Expedientes DB",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": 0,
+        "multi": false,
+        "query": "SELECT id as __value, nombre_completo as __text FROM usuarios_mirror WHERE estado_activo = true ORDER BY nombre_completo",
+        "current": { "text": "All", "value": 0 }
       }
     ]
   },
@@ -57,7 +69,7 @@
         {
           "refId": "A",
           "format": "time_series",
-          "rawSql": "SELECT date_trunc('month', fecha) AS time, COUNT(*) AS value FROM audit_events WHERE accion = 'REJECT' GROUP BY 1 ORDER BY 1"
+          "rawSql": "SELECT date_trunc('month', fecha) AS time, COUNT(*) AS value FROM audit_events WHERE accion = 'REJECT' AND (0 IN (${usuario:csv}) OR usuario_id IN (${usuario:csv})) GROUP BY 1 ORDER BY 1"
         }
       ]
     },
@@ -83,7 +95,7 @@
         {
           "refId": "A",
           "format": "table",
-          "rawSql": "SELECT usuario_nombre, COUNT(*) AS rechazos FROM audit_events WHERE accion = 'REJECT' GROUP BY usuario_nombre ORDER BY rechazos DESC"
+          "rawSql": "SELECT usuario_nombre, COUNT(*) AS rechazos FROM audit_events WHERE accion = 'REJECT' AND (0 IN (${usuario:csv}) OR usuario_id IN (${usuario:csv})) GROUP BY usuario_nombre ORDER BY rechazos DESC"
         }
       ]
     },

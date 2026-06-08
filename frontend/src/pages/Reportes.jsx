@@ -3,6 +3,8 @@ import { Navigate } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
 import { useAreas } from '../hooks/useAreas'
 import { useProcesos } from '../hooks/useProcesos'
+import { useUsuarios } from '../hooks/useUsuarios'
+import { useEtapas } from '../hooks/useEtapas'
 
 // UIDs de dashboards de Grafana (configurar después de crearlos en Grafana)
 const DASHBOARD_UIDS = {
@@ -59,6 +61,8 @@ export default function Reportes() {
   const [procesoId, setProcesoId] = useState('')
   const [fechaDesde, setFechaDesde] = useState('')
   const [fechaHasta, setFechaHasta] = useState('')
+  const [usuarioId, setUsuarioId] = useState('')
+  const [etapaId, setEtapaId] = useState('')
 
   const iframeRef = useRef(null)
   const pollRef = useRef(null)
@@ -76,11 +80,15 @@ export default function Reportes() {
   // Cargar datos para filtros
   const { areas, contratistas, cargarAreas, cargarContratistas } = useAreas()
   const { procesos, cargarProcesos } = useProcesos()
+  const { usuarios, cargarUsuarios } = useUsuarios()
+  const { etapas, cargarEtapas } = useEtapas()
 
   useEffect(() => {
     cargarAreas()
     cargarContratistas()
     cargarProcesos()
+    cargarUsuarios()
+    cargarEtapas()
     return () => {
       mountedRef.current = false
       if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current)
@@ -88,7 +96,7 @@ export default function Reportes() {
   }, [])
 
   // Construir URL del iframe con filtros como variables de Grafana
-  const buildIframeSrc = useCallback((tab, auditTab, area, contratista, proceso, desde, hasta) => {
+  const buildIframeSrc = useCallback((tab, auditTab, area, contratista, proceso, desde, hasta, usuario, etapa) => {
     const dashboardKey = tab === 'auditoria' ? auditTab : tab
     const uid = DASHBOARD_UIDS[dashboardKey]
     const params = new URLSearchParams({
@@ -103,6 +111,8 @@ export default function Reportes() {
     if (proceso) params.set('var-proceso', proceso)
     if (desde) params.set('var-fecha_desde', desde)
     if (hasta) params.set('var-fecha_hasta', hasta)
+    if (usuario) params.set('var-usuario', usuario)
+    if (etapa) params.set('var-etapa', etapa)
 
     return `/grafana/d/${uid}?${params.toString()}`
   }, [])
@@ -160,10 +170,10 @@ export default function Reportes() {
     setHasApplied(true)
     setIsLoading(true)
     const src = buildIframeSrc(
-      activeTab, activeAuditTab, areaId, contratistaId, procesoId, fechaDesde, fechaHasta
+      activeTab, activeAuditTab, areaId, contratistaId, procesoId, fechaDesde, fechaHasta, usuarioId, etapaId
     )
     setIframeSrc(src)
-  }, [activeTab, activeAuditTab, areaId, contratistaId, procesoId, fechaDesde, fechaHasta, buildIframeSrc])
+  }, [activeTab, activeAuditTab, areaId, contratistaId, procesoId, fechaDesde, fechaHasta, usuarioId, etapaId, buildIframeSrc])
 
   // Limpiar filtros y recargar
   const clearAndApply = useCallback(() => {
@@ -172,10 +182,12 @@ export default function Reportes() {
     setProcesoId('')
     setFechaDesde('')
     setFechaHasta('')
+    setUsuarioId('')
+    setEtapaId('')
     // Aplicar con filtros vacíos
     setHasApplied(true)
     setIsLoading(true)
-    const src = buildIframeSrc(activeTab, activeAuditTab, '', '', '', '', '')
+    const src = buildIframeSrc(activeTab, activeAuditTab, '', '', '', '', '', '', '')
     setIframeSrc(src)
   }, [activeTab, activeAuditTab, buildIframeSrc])
 
@@ -186,10 +198,10 @@ export default function Reportes() {
       setIsLoading(true)
       const auditTab = tabId === 'auditoria' ? activeAuditTab : null
       setIframeSrc(buildIframeSrc(
-        tabId, auditTab, areaId, contratistaId, procesoId, fechaDesde, fechaHasta
+        tabId, auditTab, areaId, contratistaId, procesoId, fechaDesde, fechaHasta, usuarioId, etapaId
       ))
     }
-  }, [hasApplied, activeAuditTab, areaId, contratistaId, procesoId, fechaDesde, fechaHasta, buildIframeSrc])
+  }, [hasApplied, activeAuditTab, areaId, contratistaId, procesoId, fechaDesde, fechaHasta, usuarioId, etapaId, buildIframeSrc])
 
   // Cambio de sub-tab de auditoría
   const handleAuditTabChange = useCallback((auditTabId) => {
@@ -197,16 +209,16 @@ export default function Reportes() {
     if (hasApplied && activeTab === 'auditoria') {
       setIsLoading(true)
       setIframeSrc(buildIframeSrc(
-        'auditoria', auditTabId, areaId, contratistaId, procesoId, fechaDesde, fechaHasta
+        'auditoria', auditTabId, areaId, contratistaId, procesoId, fechaDesde, fechaHasta, usuarioId, etapaId
       ))
     }
-  }, [hasApplied, activeTab, areaId, contratistaId, procesoId, fechaDesde, fechaHasta, buildIframeSrc])
+  }, [hasApplied, activeTab, areaId, contratistaId, procesoId, fechaDesde, fechaHasta, usuarioId, etapaId, buildIframeSrc])
 
   const areasActivas = areas.filter(area => area.estado_activo !== false)
   const contratistasActivos = contratistas.filter(contratista => contratista.estado_activo !== false)
   const procesosActivos = procesos.filter(proceso => proceso.estado_activo !== false)
 
-  const hasFilters = areaId || contratistaId || procesoId || fechaDesde || fechaHasta
+  const hasFilters = areaId || contratistaId || procesoId || fechaDesde || fechaHasta || usuarioId || etapaId
 
   if (!user || user.rol_id !== 1) {
     return <Navigate to="/" replace />
@@ -299,6 +311,26 @@ export default function Reportes() {
               value={fechaHasta}
               onChange={e => setFechaHasta(e.target.value)}
             />
+          </div>
+
+          <div className="filter-field">
+            <label>Usuario</label>
+            <select value={usuarioId} onChange={e => setUsuarioId(e.target.value)}>
+              <option value="">Todos</option>
+              {usuarios.map(u => (
+                <option key={u.id} value={u.id}>{u.nombre_completo}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filter-field">
+            <label>Etapa</label>
+            <select value={etapaId} onChange={e => setEtapaId(e.target.value)}>
+              <option value="">Todas</option>
+              {etapas.map(ep => (
+                <option key={ep.id} value={ep.id}>{ep.nombre}</option>
+              ))}
+            </select>
           </div>
 
           <div className="filter-actions">

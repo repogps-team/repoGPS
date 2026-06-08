@@ -7,7 +7,22 @@
   "version": 1,
   "refresh": "30s",
   "time": { "from": "now-30d", "to": "now" },
-  "templating": { "list": [] },
+  "templating": {
+    "list": [
+      {
+        "name": "usuario",
+        "label": "Usuario",
+        "type": "query",
+        "datasource": "Expedientes DB",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": 0,
+        "multi": false,
+        "query": "SELECT id as __value, nombre_completo as __text FROM usuarios_mirror WHERE estado_activo = true ORDER BY nombre_completo",
+        "current": { "text": "All", "value": 0 }
+      }
+    ]
+  },
   "panels": [
     {
       "type": "table",
@@ -18,7 +33,7 @@
         {
           "refId": "A",
           "format": "table",
-          "rawSql": "SELECT usuario_nombre, MAX(fecha) AS ultimo_login, COUNT(*) AS logins_totales FROM audit_events WHERE accion = 'LOGIN' GROUP BY usuario_nombre ORDER BY ultimo_login DESC"
+          "rawSql": "SELECT usuario_nombre, MAX(fecha) AS ultimo_login, COUNT(*) AS logins_totales FROM audit_events WHERE accion = 'LOGIN' AND (0 IN (${usuario:csv}) OR usuario_id IN (${usuario:csv})) GROUP BY usuario_nombre ORDER BY ultimo_login DESC"
         }
       ]
     },
@@ -31,7 +46,7 @@
         {
           "refId": "A",
           "format": "table",
-          "rawSql": "SELECT CASE WHEN MAX(fecha) >= NOW() - INTERVAL '30 days' THEN 'Activo' ELSE 'Inactivo' END AS estado, COUNT(DISTINCT usuario_id) AS usuarios FROM audit_events WHERE accion = 'LOGIN' GROUP BY estado"
+          "rawSql": "SELECT CASE WHEN MAX(fecha) >= NOW() - INTERVAL '30 days' THEN 'Activo' ELSE 'Inactivo' END AS estado, COUNT(DISTINCT usuario_id) AS usuarios FROM audit_events WHERE accion = 'LOGIN' AND (0 IN (${usuario:csv}) OR usuario_id IN (${usuario:csv})) GROUP BY estado"
         }
       ]
     },
@@ -44,7 +59,7 @@
         {
           "refId": "A",
           "format": "time_series",
-          "rawSql": "SELECT EXTRACT(HOUR FROM fecha) AS time, COUNT(*) AS value FROM audit_events GROUP BY 1 ORDER BY 1"
+          "rawSql": "SELECT EXTRACT(HOUR FROM fecha) AS time, COUNT(*) AS value FROM audit_events WHERE (0 IN (${usuario:csv}) OR usuario_id IN (${usuario:csv})) GROUP BY 1 ORDER BY 1"
         }
       ]
     },
