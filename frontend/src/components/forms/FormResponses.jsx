@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useApi } from '../../hooks/useApi'
+import DataTable from '../shared/DataTable'
 
 const FormResponses = () => {
   const { id } = useParams()
@@ -35,9 +36,45 @@ const FormResponses = () => {
     cargarDatos()
   }, [id, get])
 
-  const handleVerRespuesta = (respuesta) => {
-    setSelectedRespuesta(respuesta)
-  }
+  const columns = useMemo(() => [
+    {
+      accessorKey: 'expediente_titulo',
+      header: 'Expediente',
+      cell: (info) => info.getValue() || `Expediente #${info.row.original.expediente_id}`,
+      meta: { priority: 'high' }
+    },
+    {
+      accessorKey: 'usuario_nombre',
+      header: 'Usuario',
+      cell: (info) => info.getValue() || '-',
+      meta: { priority: 'medium' }
+    },
+    {
+      accessorKey: 'fecha_envio',
+      header: 'Fecha Envío',
+      cell: (info) => new Date(info.getValue()).toLocaleString(),
+      meta: { priority: 'medium' }
+    },
+    {
+      accessorKey: 'estado',
+      header: 'Estado',
+      cell: (info) => (
+        <span className="role-tag">
+          {info.getValue() || 'Enviado'}
+        </span>
+      ),
+      meta: { priority: 'high' }
+    },
+    {
+      id: 'acciones',
+      header: 'Acciones',
+      enableSorting: false,
+      cell: (info) => (
+        <button className="btn-mini" onClick={() => setSelectedRespuesta(info.row.original)}>Ver</button>
+      ),
+      meta: { priority: 'high' }
+    }
+  ], [])
 
   return (
     <section className="panel">
@@ -50,74 +87,38 @@ const FormResponses = () => {
 
       {error && <div className="alert alert-error">{error}</div>}
 
-      {loading ? (
-        <div className="loading">Cargando...</div>
-      ) : (
-        <>
-          <div className="table-wrap">
-            <table className="users-table">
-              <thead>
-                <tr>
-                  <th>Expediente</th>
-                  <th>Usuario</th>
-                  <th>Fecha Envío</th>
-                  <th>Estado</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {respuestas.length === 0 ? (
-                  <tr>
-                    <td colSpan={5}>
-                      <p className="empty-text">No hay respuestas para este formulario</p>
-                    </td>
-                  </tr>
-                ) : (
-                  respuestas.map(r => (
-                    <tr key={r.id}>
-                      <td>{r.expediente_titulo || `Expediente #${r.expediente_id}`}</td>
-                      <td>{r.usuario_nombre || '-'}</td>
-                      <td>{new Date(r.fecha_envio).toLocaleString()}</td>
-                      <td>
-                        <span className="role-tag">
-                          {r.estado || 'Enviado'}
-                        </span>
-                      </td>
-                      <td>
-                        <button
-                          className="btn-mini"
-                          onClick={() => handleVerRespuesta(r)}
-                        >
-                          Ver
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+      <DataTable
+        data={respuestas}
+        columns={columns}
+        config={{
+          loading,
+          searchable: true,
+          searchPlaceholder: 'Buscar respuesta...',
+          sortable: true,
+          pagination: true,
+          pageSize: 10,
+          emptyMessage: 'No hay respuestas para este formulario'
+        }}
+      />
 
-          {selectedRespuesta && formDefinition && (
-            <div className="exp-section" style={{ marginTop: '16px' }}>
-              <h4>Detalle de Respuesta</h4>
-              <div className="formio-renderer-wrapper">
-                <FormIORenderer
-                  schema={formDefinition.schema}
-                  submission={selectedRespuesta.data}
-                  readOnly={true}
-                />
-              </div>
-              <button
-                className="btn btn-secondary"
-                onClick={() => setSelectedRespuesta(null)}
-                style={{ marginTop: '8px' }}
-              >
-                Cerrar
-              </button>
-            </div>
-          )}
-        </>
+      {selectedRespuesta && formDefinition && (
+        <div className="exp-section" style={{ marginTop: '16px' }}>
+          <h4>Detalle de Respuesta</h4>
+          <div className="formio-renderer-wrapper">
+            <FormIORenderer
+              schema={formDefinition.schema}
+              submission={selectedRespuesta.data}
+              readOnly={true}
+            />
+          </div>
+          <button
+            className="btn btn-secondary"
+            onClick={() => setSelectedRespuesta(null)}
+            style={{ marginTop: '8px' }}
+          >
+            Cerrar
+          </button>
+        </div>
       )}
     </section>
   )
@@ -136,7 +137,6 @@ const FormIORenderer = ({ schema, submission, readOnly }) => {
         const FormClass = mod.Form || mod.default?.Form
         const FormioClass = mod.Formio || mod.default
 
-        // Suppress Missing projectId warning
         if (FormioClass) {
           FormioClass.setBaseUrl('')
           FormioClass.setProjectUrl('')
