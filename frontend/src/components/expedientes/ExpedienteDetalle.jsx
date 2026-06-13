@@ -526,7 +526,8 @@ const ExpedienteDetalle = ({
                     pagination: documentos.length > 10,
                     emptyMessage: 'Sin documentos adjuntos',
                     enableExpanding: true,
-                    singleExpanding: true
+                    singleExpanding: true,
+                    onRowClick: (row) => row.toggleExpanded()
                   }}
                   renderExpanded={renderDocumentoExpanded}
                 />
