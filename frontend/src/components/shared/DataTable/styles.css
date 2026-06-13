@@ -1,0 +1,227 @@
+/* DataTable Container */
+.data-table-container {
+  width: 100%;
+}
+
+/* Search */
+.data-table-search {
+  margin-bottom: 16px;
+}
+
+/* Table Wrap - keep existing class */
+.table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Sorting */
+.data-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.data-table th.sortable:hover {
+  background-color: var(--bg-hover, #f0f0f0);
+}
+
+.th-content {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sort-indicator {
+  font-size: 10px;
+  opacity: 0.6;
+}
+
+.sort-indicator.sort-asc,
+.sort-indicator.sort-desc {
+  opacity: 1;
+  color: var(--primary-color, #3498db);
+}
+
+/* Striped */
+.data-table.striped tbody tr:nth-child(even) {
+  background-color: var(--bg-stripe, #f9f9f9);
+}
+
+/* Hoverable */
+.data-table.hoverable tbody tr:hover {
+  background-color: var(--bg-hover, #f0f0f0);
+}
+
+/* Pagination */
+.data-table-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.pagination-info {
+  font-size: 14px;
+  color: var(--text-muted, #666);
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.pagination-controls label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.pagination-controls select {
+  padding: 4px 8px;
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 4px;
+}
+
+.pagination-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pagination-buttons button {
+  padding: 4px 8px;
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 4px;
+  background: var(--bg-primary, #fff);
+  cursor: pointer;
+}
+
+.pagination-buttons button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-buttons button:hover:not(:disabled) {
+  background-color: var(--bg-hover, #f0f0f0);
+}
+
+.page-info {
+  font-size: 14px;
+  min-width: 100px;
+  text-align: center;
+}
+
+/* Card View - Mobile */
+.data-table-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.data-table-card {
+  background: var(--bg-primary, #fff);
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.data-table-card.selected-row {
+  border-color: var(--primary-color, #3498db);
+  background-color: var(--bg-selected, #f0f7ff);
+}
+
+.card-field {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 4px 0;
+}
+
+.card-label {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--text-muted, #666);
+  text-transform: uppercase;
+  min-width: 100px;
+}
+
+.card-value {
+  flex: 1;
+  text-align: right;
+}
+
+.data-table-card-empty,
+.data-table-empty,
+.data-table-loading {
+  text-align: center;
+  padding: 32px;
+  color: var(--text-muted, #666);
+}
+
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border-color, #ddd);
+  border-top-color: var(--primary-color, #3498db);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 12px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Empty State */
+.data-table .empty-state {
+  text-align: center;
+  padding: 24px;
+  color: var(--text-muted, #666);
+}
+
+/* Expanded Row */
+.data-table .expanded-row {
+  background-color: var(--bg-selected, #f0f7ff) !important;
+}
+
+.data-table .expanded-row-content {
+  background-color: var(--bg-secondary, #f5f5f5);
+}
+
+.data-table .expanded-row-content td {
+  padding: 0;
+  border-top: none;
+}
+
+.expanded-row-container {
+  padding: 16px;
+  background: var(--bg-secondary, #f5f5f5);
+  border-radius: 4px;
+}
+
+.expanded-row-toggle {
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: inherit;
+  font-size: inherit;
+}
+
+.expanded-row-toggle:hover {
+  opacity: 0.8;
+}
+
+.toggle-icon {
+  font-size: 12px;
+  transition: transform 0.2s ease;
+}
