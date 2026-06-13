@@ -165,11 +165,11 @@ function Login() {
 
             {mensajeInfo && (
               <p style={{
-                background: '#e8f5e9',
-                color: '#1b5e20',
+                background: 'var(--success-bg, #e8f5e9)',
+                color: 'var(--success-text, #1b5e20)',
                 padding: '10px 12px',
                 borderRadius: '6px',
-                border: '1px solid #c8e6c9',
+                border: '1px solid var(--success-color, #c8e6c9)',
                 marginBottom: '12px'
               }}>
                 {mensajeInfo}

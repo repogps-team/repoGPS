@@ -403,7 +403,7 @@ const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicia
                     {procesosFiltrados.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
                   </select>
                   {formData.proceso_id && etapasProceso.length === 0 && (
-                    <p style={{ color: '#e74c3c', fontSize: '12px', marginTop: '4px' }}>
+                    <p style={{ color: 'var(--danger-color)', fontSize: '12px', marginTop: '4px' }}>
                       Este proceso no tiene etapas activas. El expediente no podrá avanzar.
                     </p>
                   )}

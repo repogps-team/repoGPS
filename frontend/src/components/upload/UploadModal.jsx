@@ -282,7 +282,7 @@ export const UploadModal = ({ isOpen, onClose, expedienteId, documentoId, onUplo
 
         .upload-dropzone.reject {
           border-color: var(--danger-color, #f44336);
-          background: #fff9f9;
+          background: rgba(239, 68, 68, 0.08);
         }
 
         .upload-dropzone.disabled {

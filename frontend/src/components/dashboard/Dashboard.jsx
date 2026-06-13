@@ -68,17 +68,17 @@ const Dashboard = ({ user, esAdmin = true }) => {
       </h2>
 
       <div className="dashboard-grid">
-        <button type="button" className="dashboard-card" style={{ borderLeftColor: '#64748b' }} onClick={() => handleClick('todos')}>
-          <div className="dashboard-value" style={{ color: '#64748b' }}>{stats.total}</div>
+        <button type="button" className="dashboard-card" style={{ borderLeftColor: 'var(--text-muted)' }} onClick={() => handleClick('todos')}>
+          <div className="dashboard-value" style={{ color: 'var(--text-muted)' }}>{stats.total}</div>
           <div className="dashboard-label">Total</div>
         </button>
-        <button type="button" className="dashboard-card" style={{ borderLeftColor: '#94a3b8' }} onClick={() => handleClick('Pendiente')}>
-          <div className="dashboard-value" style={{ color: '#94a3b8' }}>{stats.pendiente}</div>
+        <button type="button" className="dashboard-card" style={{ borderLeftColor: 'var(--secondary-color)' }} onClick={() => handleClick('Pendiente')}>
+          <div className="dashboard-value" style={{ color: 'var(--secondary-color)' }}>{stats.pendiente}</div>
           <div className="dashboard-label">Pendiente</div>
         </button>
-        <div className="dashboard-card" style={{ borderLeftColor: '#3b82f6' }}>
+        <div className="dashboard-card" style={{ borderLeftColor: 'var(--primary-color)' }}>
           <button type="button" className="dashboard-card-inner" onClick={() => handleClick('En Desarrollo', 'todos')}>
-            <div className="dashboard-value" style={{ color: '#3b82f6' }}>{enRevisionTotal}</div>
+            <div className="dashboard-value" style={{ color: 'var(--primary-color)' }}>{enRevisionTotal}</div>
             <div className="dashboard-label">En Desarrollo</div>
           </button>
             <div className="dashboard-substats">
@@ -90,8 +90,8 @@ const Dashboard = ({ user, esAdmin = true }) => {
               </button>
             </div>
         </div>
-        <button type="button" className="dashboard-card" style={{ borderLeftColor: '#22c55e' }} onClick={() => handleClick('Terminado')}>
-          <div className="dashboard-value" style={{ color: '#22c55e' }}>{stats.terminado}</div>
+        <button type="button" className="dashboard-card" style={{ borderLeftColor: 'var(--success-color)' }} onClick={() => handleClick('Terminado')}>
+          <div className="dashboard-value" style={{ color: 'var(--success-color)' }}>{stats.terminado}</div>
           <div className="dashboard-label">Terminado</div>
         </button>
       </div>

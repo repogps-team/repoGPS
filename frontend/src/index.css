@@ -33,6 +33,14 @@
   --timeline-badge-bg: #4CAF50;
   --timeline-badge-text: #ffffff;
 
+  /* Badge states (BandejaTareas) */
+  --info-bg: #dbeafe;
+  --info-text: #1d4ed8;
+  --success-bg: #dcfce7;
+  --success-text: #166534;
+  --warning-bg: #fef3c7;
+  --warning-text: #92400e;
+
   --header-bg: #0f172a;
   --header-text: #ffffff;
 
@@ -77,6 +85,14 @@
   --timeline-current-bg: #1a2e1a;
   --timeline-badge-bg: #10b981;
   --timeline-badge-text: #f1f5f9;
+
+  /* Badge states (BandejaTareas) */
+  --info-bg: rgba(59, 130, 246, 0.15);
+  --info-text: #93c5fd;
+  --success-bg: rgba(16, 185, 129, 0.15);
+  --success-text: #6ee7b7;
+  --warning-bg: rgba(245, 158, 11, 0.15);
+  --warning-text: #fcd34d;
 }
 
 
@@ -1884,7 +1900,7 @@ button { font-family: inherit; }
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   font-size: 0.9rem;
-  background-color: white;
+  background-color: var(--bg-panel);
   color: var(--text-main);
 }
 

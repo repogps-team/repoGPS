@@ -117,7 +117,7 @@ const ContratistasPanel = () => {
               onChange={e => { setFormData({ ...formData, rut: e.target.value }); setErrorRut(''); }}
               required
             />
-            {errorRut && <span style={{ color: '#e74c3c', fontSize: '12px', display: 'block', marginTop: '4px' }}>{errorRut}</span>}
+            {errorRut && <span style={{ color: 'var(--danger-color)', fontSize: '12px', display: 'block', marginTop: '4px' }}>{errorRut}</span>}
           </div>
           <div className="form-actions">
             <button type="submit" className="btn btn-primary">{editandoId ? 'Actualizar' : 'Crear'}</button>
