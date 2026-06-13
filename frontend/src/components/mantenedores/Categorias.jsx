@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useCategorias } from '../../hooks/useCategorias'
 import DataTable from '../shared/DataTable'
 
@@ -64,15 +64,15 @@ const CategoriasPanel = () => {
     }
   }
 
-  const handleEditarCategoria = (cat) => {
+  const handleEditarCategoria = useCallback((cat) => {
     setFormCategoria({
       nombre: cat.nombre,
       descripcion: cat.descripcion || ''
     })
     setEditandoCategoriaId(cat.id)
-  }
+  }, [])
 
-  const handleCambiarEstadoCategoria = async (id, nuevoEstado) => {
+  const handleCambiarEstadoCategoria = useCallback(async (id, nuevoEstado) => {
     try {
       await cambiarEstadoCategoria(id, nuevoEstado)
       await cargarCategorias()
@@ -82,7 +82,7 @@ const CategoriasPanel = () => {
     } catch (err) {
       alert(err.message)
     }
-  }
+  }, [cambiarEstadoCategoria, cargarCategorias, cargarSubtipos, categoriaSeleccionada])
 
   const filteredCategorias = useMemo(() => {
     return categorias.filter(c => tabCategorias === 'activos' ? c.estado_activo : !c.estado_activo)
@@ -114,7 +114,7 @@ const CategoriasPanel = () => {
       ),
       meta: { priority: 'high' }
     }
-  ], [editandoCategoriaId])
+  ], [handleEditarCategoria, handleCambiarEstadoCategoria])
 
   // ============================================
   // HANDLERS SUBTIPOS
@@ -150,22 +150,22 @@ const CategoriasPanel = () => {
     }
   }
 
-  const handleEditarSubtipo = (sub) => {
+  const handleEditarSubtipo = useCallback((sub) => {
     setFormSubtipo({
       nombre: sub.nombre,
       descripcion: sub.descripcion || ''
     })
     setEditandoSubtipoId(sub.id)
-  }
+  }, [])
 
-  const handleCambiarEstadoSubtipo = async (id, nuevoEstado) => {
+  const handleCambiarEstadoSubtipo = useCallback(async (id, nuevoEstado) => {
     try {
       await cambiarEstadoSubtipo(id, nuevoEstado)
       await cargarSubtipos(categoriaSeleccionada)
     } catch (err) {
       alert(err.message)
     }
-  }
+  }, [cambiarEstadoSubtipo, cargarSubtipos, categoriaSeleccionada])
 
   const filteredSubtipos = useMemo(() => {
     return subtipos.filter(s => tabSubtipos === 'activos' ? s.estado_activo : !s.estado_activo)
@@ -197,7 +197,7 @@ const CategoriasPanel = () => {
       ),
       meta: { priority: 'high' }
     }
-  ], [editandoSubtipoId])
+  ], [handleEditarSubtipo, handleCambiarEstadoSubtipo])
 
   const getTituloCategoria = () => editandoCategoriaId ? 'Modificar' : 'Registrar'
   const getTituloSubtipo = () => editandoSubtipoId ? 'Modificar' : 'Registrar'

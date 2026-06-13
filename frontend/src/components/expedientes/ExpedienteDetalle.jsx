@@ -5,7 +5,7 @@ import { DocumentTimeline } from '../upload/DocumentTimeline'
 import FormRenderer from '../forms/FormRenderer'
 import { useApi } from '../../hooks/useApi'
 import DataTable from '../shared/DataTable'
-import { formatDate } from '../shared/shared/ColumnHelpers'
+import { formatDate } from '../shared/shared/formatters'
 
 const ExpedienteDetalle = ({
   expediente,
@@ -22,6 +22,14 @@ const ExpedienteDetalle = ({
   const [showUploadModal, setShowUploadModal] = useState(false)
   const navigate = useNavigate()
   const { get } = useApi()
+  const [showNuevaVersionModal, setShowNuevaVersionModal] = useState(false)
+  const [documentoParaNuevaVersion, setDocumentoParaNuevaVersion] = useState(null)
+  const [formulariosAsignados, setFormulariosAsignados] = useState([])
+  const [expandedFormId, setExpandedFormId] = useState(null)
+  const [expandedFormDetail, setExpandedFormDetail] = useState(null)
+  const [viewingResponse, setViewingResponse] = useState(null)
+  const [transicionesDisponibles, setTransicionesDisponibles] = useState([])
+  const [etapasProceso, setEtapasProceso] = useState([])
 
   // Refrescar documentos cuando el sync offline completa
   const handleSyncComplete = useCallback(() => {
@@ -34,14 +42,6 @@ const ExpedienteDetalle = ({
     window.addEventListener('repogps:sync-complete', handleSyncComplete)
     return () => window.removeEventListener('repogps:sync-complete', handleSyncComplete)
   }, [handleSyncComplete])
-  const [showNuevaVersionModal, setShowNuevaVersionModal] = useState(false)
-  const [documentoParaNuevaVersion, setDocumentoParaNuevaVersion] = useState(null)
-  const [formulariosAsignados, setFormulariosAsignados] = useState([])
-  const [expandedFormId, setExpandedFormId] = useState(null)
-  const [expandedFormDetail, setExpandedFormDetail] = useState(null) // schema + respuestas completas
-  const [viewingResponse, setViewingResponse] = useState(null)
-  const [transicionesDisponibles, setTransicionesDisponibles] = useState([])
-  const [etapasProceso, setEtapasProceso] = useState([])
 
   const handleAvanzar = async () => {
     const observacion = prompt('Observación (opcional):')
@@ -122,35 +122,52 @@ const ExpedienteDetalle = ({
         cargarEtapas()
       }
     }
-  }, [expediente?.id, get])
+  }, [expediente?.id, expediente?.proceso_id, get])
 
-  const handleExpandForm = async (form) => {
-    if (expandedFormId === form.id) {
+  const handleStartRespond = useCallback((form) => {
+    navigate(`/expedientes/${expediente.id}/responder/${form.id}`)
+  }, [navigate, expediente?.id])
+
+  useEffect(() => {
+    const cargarDetalleFormulario = async () => {
+      if (!expediente?.id || !expandedFormId) {
+        setExpandedFormDetail(null)
+        return
+      }
+
+      try {
+        const [formDef, responses] = await Promise.all([
+          get(`/api/forms/${expandedFormId}`),
+          get(`/api/forms/${expandedFormId}/respuestas`)
+        ])
+
+        const filteredResponses = Array.isArray(responses)
+          ? responses.filter(r => Number(r.expediente_id) === Number(expediente.id))
+          : []
+
+        setExpandedFormDetail({ schema: formDef?.schema, respuestas: filteredResponses })
+      } catch (err) {
+        console.error('Error al cargar detalle del formulario:', err)
+        setExpandedFormDetail({ schema: null, respuestas: [] })
+      }
+    }
+
+    cargarDetalleFormulario()
+  }, [expandedFormId, expediente?.id, get])
+
+  const handleFormRowClick = (row) => {
+    const formId = row.original.id
+    if (expandedFormId === formId) {
+      row.toggleExpanded(false)
       setExpandedFormId(null)
       setExpandedFormDetail(null)
       setViewingResponse(null)
       return
     }
-    setExpandedFormId(form.id)
-    setViewingResponse(null)
-    // Fetch full form definition (with schema) and responses
-    try {
-      const [formDef, responses] = await Promise.all([
-        get(`/api/forms/${form.id}`),
-        get(`/api/forms/${form.id}/respuestas`)
-      ])
-      const filteredResponses = Array.isArray(responses)
-        ? responses.filter(r => Number(r.expediente_id) === Number(expediente.id))
-        : []
-      setExpandedFormDetail({ schema: formDef?.schema, respuestas: filteredResponses })
-    } catch (err) {
-      console.error('Error al cargar detalle del formulario:', err)
-      setExpandedFormDetail({ schema: null, respuestas: [] })
-    }
-  }
 
-  const handleStartRespond = (form) => {
-    navigate(`/expedientes/${expediente.id}/responder/${form.id}`)
+    row.toggleExpanded(true)
+    setExpandedFormId(formId)
+    setViewingResponse(null)
   }
 
   // HU-12: Determinar estado de cada etapa para el timeline
@@ -176,8 +193,6 @@ const ExpedienteDetalle = ({
     skipped: 'radio_button_unchecked',
     pending: 'radio_button_unchecked'
   }
-
-  if (!expediente) return null
 
   const handleFechaTerminoChange = async (e) => {
     const nuevaFecha = e.target.value
@@ -362,7 +377,7 @@ const ExpedienteDetalle = ({
       ),
       meta: { priority: 'high' }
     }
-  ], [])
+  ], [handleStartRespond])
 
   // Render expanded content for Documentos
   const renderDocumentoExpanded = useCallback((row) => {
@@ -411,9 +426,10 @@ const ExpedienteDetalle = ({
     )
   }, [expandedFormDetail, viewingResponse])
 
+  if (!expediente) return null
+
   return (
     <>
-      {/* Expediente Detail Modal */}
       <div className="modal-overlay" onClick={onCerrar}>
         <div className="modal-content modal-content--expediente" onClick={e => e.stopPropagation()}>
           <div className="modal-header">
@@ -443,7 +459,6 @@ const ExpedienteDetalle = ({
               )}
             </div>
 
-            {/* HU-12: Timeline de etapas del proceso */}
             {etapasProceso.length > 0 && (
               <div className="exp-section">
                 <h4>Progreso del Proceso</h4>
@@ -530,7 +545,8 @@ const ExpedienteDetalle = ({
                     pagination: formulariosAsignados.length > 10,
                     emptyMessage: 'Sin formularios asignados',
                     enableExpanding: true,
-                    singleExpanding: true
+                    singleExpanding: true,
+                    onRowClick: handleFormRowClick
                   }}
                   renderExpanded={renderFormularioExpanded}
                 />
@@ -540,7 +556,6 @@ const ExpedienteDetalle = ({
         </div>
       </div>
 
-      {/* Upload Modal for new documents - rendered as separate overlay */}
       {showUploadModal && (
         <UploadModal
           isOpen={showUploadModal}
@@ -550,7 +565,6 @@ const ExpedienteDetalle = ({
         />
       )}
 
-      {/* Upload Modal for new version of existing document - rendered as separate overlay */}
       {showNuevaVersionModal && (
         <UploadModal
           isOpen={showNuevaVersionModal}

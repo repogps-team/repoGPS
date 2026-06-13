@@ -120,7 +120,7 @@ const AdminTransiciones = () => {
     }
   }
 
-  const handleEliminarRegla = async (id) => {
+  const handleEliminarRegla = useCallback(async (id) => {
     if (!window.confirm('¿Esta seguro de eliminar esta regla de transicion?')) return
 
     setError(null)
@@ -132,7 +132,7 @@ const AdminTransiciones = () => {
     } catch (err) {
       setError(err.message)
     }
-  }
+  }, [del, cargarReglas, selectedProceso])
 
   const getRolNombre = (rolId) => {
     const rol = ROLES.find(r => r.id === rolId)
@@ -176,7 +176,7 @@ const AdminTransiciones = () => {
       ),
       meta: { priority: 'high' }
     }
-  ], [selectedProceso])
+  ], [handleEliminarRegla])
 
   return (
     <section className="panel">

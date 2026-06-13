@@ -57,6 +57,7 @@ const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicia
   const [areasFiltradas, setAreasFiltradas] = useState([])
   const [disciplinasFiltradas, setDisciplinasFiltradas] = useState([])
   const [procesosFiltrados, setProcesosFiltrados] = useState([])
+  const [now] = useState(() => Date.now())
 
   // Es admin?
   const esAdmin = user?.rol_id === 1
@@ -223,7 +224,7 @@ const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicia
       .filter(e => {
         if (!filtroSla || filtroSla === 'todos') return true
         if (e.estado !== 'En Desarrollo') return false
-        const ahora = Date.now()
+        const ahora = now
         if (e.fecha_termino) {
           const fechaTermino = new Date(e.fecha_termino).getTime()
           if (filtroSla === 'atrasado') return ahora > fechaTermino
@@ -237,7 +238,7 @@ const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicia
         return true
       })
       .filter(e => !filtroProceso || e.proceso_id === Number(filtroProceso))
-  }, [expedientes, esAdmin, user, filtroEstado, filtroSla, filtroProceso])
+  }, [expedientes, esAdmin, user, filtroEstado, filtroSla, filtroProceso, now])
 
   const columns = useMemo(() => [
     {
@@ -271,7 +272,7 @@ const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicia
         if (exp.estado !== 'En Desarrollo') {
           return <span className="sla-tag sla-neutral">-</span>
         }
-        const ahora = Date.now()
+        const ahora = now
         if (exp.fecha_termino) {
           const fechaTermino = new Date(exp.fecha_termino).getTime()
           const diffMs = fechaTermino - ahora
@@ -304,7 +305,7 @@ const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicia
       ),
       meta: { priority: 'high' }
     }
-  ], [abrirDetalle])
+  ], [abrirDetalle, now])
 
   return (
     <>

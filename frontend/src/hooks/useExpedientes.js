@@ -8,7 +8,7 @@ export const useExpedientes = () => {
   const [documentos, setDocumentos] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const { get, post, put, patch } = useApi()
+  const { get, post, patch } = useApi()
 
   const cargarExpedientes = useCallback(async () => {
     setLoading(true)
@@ -93,7 +93,7 @@ export const useExpedientes = () => {
       setExpedientes(prev => prev.map(e => (e.id === data.id ? { ...e, fecha_termino: data.fecha_termino } : e)))
     }
     return data
-  }, [put])
+  }, [patch])
 
   const refreshDocumentos = useCallback(async (expedienteId) => {
     if (!expedienteId) return

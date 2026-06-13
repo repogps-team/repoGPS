@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useAreas } from '../../hooks/useAreas'
 import { useUsuarios } from '../../hooks/useUsuarios'
 import DataTable from '../shared/DataTable'
@@ -53,19 +53,19 @@ const AreasPanel = () => {
     }
   }
 
-  const handleEditar = (a) => {
+  const handleEditar = useCallback((a) => {
     setFormData({ nombre: a.nombre, contratista_id: String(a.contratista_id) })
     setEditandoId(a.id)
-  }
+  }, [])
 
-  const handleCambiarEstado = async (id, nuevoEstado) => {
+  const handleCambiarEstado = useCallback(async (id, nuevoEstado) => {
     try {
       await cambiarEstado(id, nuevoEstado)
       cargarAreas()
     } catch (err) {
       alert(err.message)
     }
-  }
+  }, [cambiarEstado, cargarAreas])
 
   const filteredAreas = useMemo(() => {
     return areas.filter(a => tabActiva === 'activos' ? a.estado_activo : !a.estado_activo)
@@ -97,7 +97,7 @@ const AreasPanel = () => {
       ),
       meta: { priority: 'high' }
     }
-  ], [editandoId])
+  ], [handleEditar, handleCambiarEstado])
 
   // ============================================
   // HANDLERS USUARIOS (HU-20)
@@ -112,23 +112,23 @@ const AreasPanel = () => {
     return lista
   }, [usuariosEnArea, usuariosSinArea, tabUsuarios])
 
-  const handleAsignarUsuario = async (usuarioId, areaId) => {
+  const handleAsignarUsuario = useCallback(async (usuarioId, areaId) => {
     try {
       await asignarArea(usuarioId, areaId)
       await cargarUsuarios()
     } catch (err) {
       alert(err.message)
     }
-  }
+  }, [asignarArea, cargarUsuarios])
 
-  const handleDesasignarUsuario = async (usuarioId) => {
+  const handleDesasignarUsuario = useCallback(async (usuarioId) => {
     try {
       await asignarArea(usuarioId, null)
       await cargarUsuarios()
     } catch (err) {
       alert(err.message)
     }
-  }
+  }, [asignarArea, cargarUsuarios])
 
   const usuariosColumns = useMemo(() => [
     {
@@ -166,7 +166,7 @@ const AreasPanel = () => {
       ),
       meta: { priority: 'high' }
     }
-  ], [tabUsuarios, areaSeleccionada])
+  ], [tabUsuarios, areaSeleccionada, handleAsignarUsuario, handleDesasignarUsuario])
 
   const getTitulo = () => editandoId ? 'Modificar' : 'Registrar'
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useUsuarios } from '../../hooks/useUsuarios'
 import DataTable from '../shared/DataTable'
 
@@ -53,7 +53,7 @@ const UsuariosPanel = () => {
     }
   }
 
-  const handleEditar = (u) => {
+  const handleEditar = useCallback((u) => {
     setFormData({
       rol_id: String(u.rol_id),
       area_id: String(u.area_id),
@@ -62,16 +62,16 @@ const UsuariosPanel = () => {
       password_hash: u.password_hash || '123456'
     })
     setEditandoId(u.id)
-  }
+  }, [])
 
-  const handleCambiarEstado = async (id, nuevoEstado) => {
+  const handleCambiarEstado = useCallback(async (id, nuevoEstado) => {
     try {
       await cambiarEstado(id, nuevoEstado)
       cargarUsuarios()
     } catch (err) {
       alert(err.message)
     }
-  }
+  }, [cambiarEstado, cargarUsuarios])
 
   const filteredData = useMemo(() => {
     return usuarios.filter(u => tabActiva === 'activos' ? u.estado_activo : !u.estado_activo)
@@ -108,7 +108,7 @@ const UsuariosPanel = () => {
       ),
       meta: { priority: 'high' }
     }
-  ], [])
+  ], [handleEditar, handleCambiarEstado])
 
   const getTitulo = () => editandoId ? 'Modificar' : 'Registrar'
 

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { useReactTable, getCoreRowModel, getSortedRowModel, getPaginationRowModel, getFilteredRowModel, getExpandedRowModel, flexRender } from '@tanstack/react-table'
+import { useReactTable, getCoreRowModel, getSortedRowModel, getPaginationRowModel, getFilteredRowModel, getExpandedRowModel } from '@tanstack/react-table'
 import DataTableHeader from './DataTableHeader'
 import DataTableBody from './DataTableBody'
 import DataTablePagination from './DataTablePagination'

@@ -31,7 +31,7 @@ const FormList = () => {
     cargarFormularios()
   }, [cargarFormularios])
 
-  const handleToggleEstado = async (id, estadoActual) => {
+  const handleToggleEstado = useCallback(async (id, estadoActual) => {
     try {
       await patch(`/api/forms/${id}/estado`, { estado_activo: !estadoActual })
       setMensaje(`Formulario ${!estadoActual ? 'activado' : 'desactivado'}`)
@@ -39,7 +39,7 @@ const FormList = () => {
     } catch (err) {
       setError(err.message)
     }
-  }
+  }, [patch, cargarFormularios])
 
   const columns = useMemo(() => [
     {
@@ -84,7 +84,7 @@ const FormList = () => {
       ),
       meta: { priority: 'high' }
     }
-  ], [navigate])
+  ], [navigate, handleToggleEstado])
 
   return (
     <section className="panel">

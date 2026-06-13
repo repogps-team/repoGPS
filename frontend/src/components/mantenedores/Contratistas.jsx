@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useContratistas } from '../../hooks/useContratistas'
 import DataTable from '../shared/DataTable'
 
@@ -46,19 +46,19 @@ const ContratistasPanel = () => {
     }
   }
 
-  const handleEditar = (c) => {
+  const handleEditar = useCallback((c) => {
     setFormData({ razon_social: c.razon_social, rut: c.rut })
     setEditandoId(c.id)
-  }
+  }, [])
 
-  const handleCambiarEstado = async (id, nuevoEstado) => {
+  const handleCambiarEstado = useCallback(async (id, nuevoEstado) => {
     try {
       await cambiarEstado(id, nuevoEstado)
       cargarContratistas()
     } catch (err) {
       alert(err.message)
     }
-  }
+  }, [cambiarEstado, cargarContratistas])
 
   const filteredData = useMemo(() => {
     return contratistas.filter(c => tabActiva === 'activos' ? c.estado_activo : !c.estado_activo)
@@ -89,7 +89,7 @@ const ContratistasPanel = () => {
       ),
       meta: { priority: 'high' }
     }
-  ], [])
+  ], [handleEditar, handleCambiarEstado])
 
   const getTitulo = () => editandoId ? 'Modificar' : 'Registrar'
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useDisciplinas } from '../../hooks/useDisciplinas'
 import DataTable from '../shared/DataTable'
 
@@ -43,23 +43,23 @@ const DisciplinasPanel = () => {
     }
   }
 
-  const handleEditar = (d) => {
+  const handleEditar = useCallback((d) => {
     setFormData({ 
       nombre: d.nombre, 
       area_id: String(d.area_id), 
       contratista_id: String(d.contratista_id || '') 
     })
     setEditandoId(d.id)
-  }
+  }, [])
 
-  const handleCambiarEstado = async (id, nuevoEstado) => {
+  const handleCambiarEstado = useCallback(async (id, nuevoEstado) => {
     try {
       await cambiarEstado(id, nuevoEstado)
       cargarDisciplinas()
     } catch (err) {
       alert(err.message)
     }
-  }
+  }, [cambiarEstado, cargarDisciplinas])
 
   const filteredData = useMemo(() => {
     return disciplinas.filter(d => tabActiva === 'activos' ? d.estado_activo : !d.estado_activo)
@@ -91,7 +91,7 @@ const DisciplinasPanel = () => {
       ),
       meta: { priority: 'high' }
     }
-  ], [])
+  ], [handleEditar, handleCambiarEstado])
 
   const getTitulo = () => editandoId ? 'Modificar' : 'Registrar'
 
