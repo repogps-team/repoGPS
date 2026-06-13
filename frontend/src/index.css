@@ -1473,6 +1473,18 @@ button { font-family: inherit; }
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
+/* Mobile: apilar filtros verticalmente */
+@media (max-width: 640px) {
+  .filter-group {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .filter-group select {
+    width: 100%;
+  }
+}
+
 /* Checkbox fields en formularios */
 .checkbox-field {
   display: flex;
