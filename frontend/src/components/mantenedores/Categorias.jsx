@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useCategorias } from '../../hooks/useCategorias'
+import DataTable from '../shared/DataTable'
 
 const CategoriasPanel = () => {
   const {
@@ -19,14 +20,12 @@ const CategoriasPanel = () => {
   const [formCategoria, setFormCategoria] = useState({ nombre: '', descripcion: '' })
   const [editandoCategoriaId, setEditandoCategoriaId] = useState(null)
   const [tabCategorias, setTabCategorias] = useState('activos')
-  const [busquedaCategoria, setBusquedaCategoria] = useState('')
 
   // Estados para subtipos
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState(null)
   const [formSubtipo, setFormSubtipo] = useState({ nombre: '', descripcion: '' })
   const [editandoSubtipoId, setEditandoSubtipoId] = useState(null)
   const [tabSubtipos, setTabSubtipos] = useState('activos')
-  const [busquedaSubtipo, setBusquedaSubtipo] = useState('')
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -40,11 +39,6 @@ const CategoriasPanel = () => {
       cargarSubtipos(categoriaSeleccionada)
     }
   }, [categoriaSeleccionada, cargarSubtipos])
-
-  const limpiarBusqueda = () => {
-    setBusquedaCategoria('')
-    setBusquedaSubtipo('')
-  }
 
   // ============================================
   // HANDLERS CATEGORÍAS
@@ -82,7 +76,6 @@ const CategoriasPanel = () => {
     try {
       await cambiarEstadoCategoria(id, nuevoEstado)
       await cargarCategorias()
-      // Si la categoría se desactivó, también recargar subtipos
       if (categoriaSeleccionada && !nuevoEstado) {
         await cargarSubtipos(categoriaSeleccionada)
       }
@@ -91,15 +84,37 @@ const CategoriasPanel = () => {
     }
   }
 
-  const filtrarCategorias = (lista) => {
-    return lista
-      .filter(item => tabCategorias === 'activos' ? item.estado_activo : !item.estado_activo)
-      .filter(item => {
-        const s = busquedaCategoria.toLowerCase()
-        return item.nombre?.toLowerCase().includes(s) || 
-               item.descripcion?.toLowerCase().includes(s)
-      })
-  }
+  const filteredCategorias = useMemo(() => {
+    return categorias.filter(c => tabCategorias === 'activos' ? c.estado_activo : !c.estado_activo)
+  }, [categorias, tabCategorias])
+
+  const categoriasColumns = useMemo(() => [
+    {
+      accessorKey: 'nombre',
+      header: 'Categoría',
+      meta: { priority: 'high' }
+    },
+    {
+      accessorKey: 'descripcion',
+      header: 'Descripción',
+      cell: (info) => info.getValue() || '-',
+      meta: { priority: 'medium' }
+    },
+    {
+      id: 'acciones',
+      header: 'Acciones',
+      enableSorting: false,
+      cell: (info) => (
+        <div className="actions-cell">
+          <button className="btn-mini btn-edit" onClick={(e) => { e.stopPropagation(); handleEditarCategoria(info.row.original); }}>Editar</button>
+          <button className="btn-mini btn-danger" onClick={(e) => { e.stopPropagation(); handleCambiarEstadoCategoria(info.row.original.id, !info.row.original.estado_activo); }}>
+            {info.row.original.estado_activo ? 'Borrar' : 'Reactivar'}
+          </button>
+        </div>
+      ),
+      meta: { priority: 'high' }
+    }
+  ], [editandoCategoriaId])
 
   // ============================================
   // HANDLERS SUBTIPOS
@@ -152,15 +167,37 @@ const CategoriasPanel = () => {
     }
   }
 
-  const filtrarSubtipos = (lista) => {
-    return lista
-      .filter(item => tabSubtipos === 'activos' ? item.estado_activo : !item.estado_activo)
-      .filter(item => {
-        const s = busquedaSubtipo.toLowerCase()
-        return item.nombre?.toLowerCase().includes(s) || 
-               item.descripcion?.toLowerCase().includes(s)
-      })
-  }
+  const filteredSubtipos = useMemo(() => {
+    return subtipos.filter(s => tabSubtipos === 'activos' ? s.estado_activo : !s.estado_activo)
+  }, [subtipos, tabSubtipos])
+
+  const subtiposColumns = useMemo(() => [
+    {
+      accessorKey: 'nombre',
+      header: 'Subtipo',
+      meta: { priority: 'high' }
+    },
+    {
+      accessorKey: 'descripcion',
+      header: 'Descripción',
+      cell: (info) => info.getValue() || '-',
+      meta: { priority: 'medium' }
+    },
+    {
+      id: 'acciones',
+      header: 'Acciones',
+      enableSorting: false,
+      cell: (info) => (
+        <div className="actions-cell">
+          <button className="btn-mini btn-edit" onClick={() => handleEditarSubtipo(info.row.original)}>Editar</button>
+          <button className="btn-mini btn-danger" onClick={() => handleCambiarEstadoSubtipo(info.row.original.id, !info.row.original.estado_activo)}>
+            {info.row.original.estado_activo ? 'Borrar' : 'Reactivar'}
+          </button>
+        </div>
+      ),
+      meta: { priority: 'high' }
+    }
+  ], [editandoSubtipoId])
 
   const getTituloCategoria = () => editandoCategoriaId ? 'Modificar' : 'Registrar'
   const getTituloSubtipo = () => editandoSubtipoId ? 'Modificar' : 'Registrar'
@@ -208,69 +245,33 @@ const CategoriasPanel = () => {
           <div className="tabs">
             <button 
               className={`tab-btn ${tabCategorias === 'activos' ? 'active' : ''}`} 
-              onClick={() => { setTabCategorias('activos'); limpiarBusqueda(); }}
+              onClick={() => setTabCategorias('activos')}
             >
               Activos
             </button>
             <button 
               className={`tab-btn ${tabCategorias === 'inactivos' ? 'active' : ''}`} 
-              onClick={() => { setTabCategorias('inactivos'); limpiarBusqueda(); }}
+              onClick={() => setTabCategorias('inactivos')}
             >
               Inactivos
             </button>
           </div>
-          <div className="table-controls">
-            <div className="search-wrapper">
-              <span className="search-icon"></span>
-              <input 
-                type="text" 
-                className="search-input"
-                placeholder="Buscar categoría..." 
-                value={busquedaCategoria} 
-                onChange={e => setBusquedaCategoria(e.target.value)} 
-              />
-            </div>
-          </div>
         </div>
         <div className="hint-bar">Click en una categoría para ver sus subtipos</div>
-        <div className="table-wrap">
-          <table className="users-table">
-            <thead>
-              <tr>
-                <th>Categoría</th>
-                <th>Descripción</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtrarCategorias(categorias).map(cat => (
-                <tr 
-                  key={cat.id} 
-                  className={categoriaSeleccionada === cat.id ? 'selected-row' : ''}
-                  onClick={() => setCategoriaSeleccionada(cat.id)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <td>{cat.nombre}</td>
-                  <td>{cat.descripcion || '-'}</td>
-                  <td>
-                    <button 
-                      className="btn-mini btn-edit" 
-                      onClick={(e) => { e.stopPropagation(); handleEditarCategoria(cat); }}
-                    >
-                      Editar
-                    </button>
-                    <button 
-                      className="btn-mini btn-danger" 
-                      onClick={(e) => { e.stopPropagation(); handleCambiarEstadoCategoria(cat.id, !cat.estado_activo); }}
-                    >
-                      {cat.estado_activo ? 'Borrar' : 'Reactivar'}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          data={filteredCategorias}
+          columns={categoriasColumns}
+          config={{
+            searchable: true,
+            searchPlaceholder: 'Buscar categoría...',
+            sortable: true,
+            pagination: true,
+            pageSize: 10,
+            emptyMessage: 'No hay categorías en esta categoría',
+            onRowClick: (row) => setCategoriaSeleccionada(row.original.id),
+            rowClassName: (row) => row.original.id === categoriaSeleccionada ? 'selected-row' : ''
+          }}
+        />
       </section>
 
       {/* Panel de Subtipos - Solo visible cuando hay una categoría seleccionada */}
@@ -326,67 +327,30 @@ const CategoriasPanel = () => {
               <div className="tabs">
                 <button 
                   className={`tab-btn ${tabSubtipos === 'activos' ? 'active' : ''}`} 
-                  onClick={() => { setTabSubtipos('activos'); limpiarBusqueda(); }}
+                  onClick={() => setTabSubtipos('activos')}
                 >
                   Activos
                 </button>
                 <button 
                   className={`tab-btn ${tabSubtipos === 'inactivos' ? 'active' : ''}`} 
-                  onClick={() => { setTabSubtipos('inactivos'); limpiarBusqueda(); }}
+                  onClick={() => setTabSubtipos('inactivos')}
                 >
                   Inactivos
                 </button>
               </div>
-              <div className="table-controls">
-                <div className="search-wrapper">
-                  <span className="search-icon"></span>
-                  <input 
-                    type="text" 
-                    className="search-input"
-                    placeholder="Buscar subtipo..." 
-                    value={busquedaSubtipo} 
-                    onChange={e => setBusquedaSubtipo(e.target.value)} 
-                  />
-                </div>
-              </div>
             </div>
-            <div className="table-wrap">
-              <table className="users-table">
-                <thead>
-                  <tr>
-                    <th>Subtipo</th>
-                    <th>Descripción</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtrarSubtipos(subtipos).map(sub => (
-                    <tr key={sub.id}>
-                      <td>{sub.nombre}</td>
-                      <td>{sub.descripcion || '-'}</td>
-                      <td>
-                        <button className="btn-mini btn-edit" onClick={() => handleEditarSubtipo(sub)}>
-                          Editar
-                        </button>
-                        <button 
-                          className="btn-mini btn-danger" 
-                          onClick={() => handleCambiarEstadoSubtipo(sub.id, !sub.estado_activo)}
-                        >
-                          {sub.estado_activo ? 'Borrar' : 'Reactivar'}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {filtrarSubtipos(subtipos).length === 0 && (
-                    <tr>
-                      <td colSpan="3" style={{ textAlign: 'center', color: '#888' }}>
-                        No hay subtipos para esta categoría
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              data={filteredSubtipos}
+              columns={subtiposColumns}
+              config={{
+                searchable: true,
+                searchPlaceholder: 'Buscar subtipo...',
+                sortable: true,
+                pagination: true,
+                pageSize: 5,
+                emptyMessage: 'No hay subtipos para esta categoría'
+              }}
+            />
           </section>
         </>
       )}
