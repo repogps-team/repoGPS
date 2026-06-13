@@ -18,6 +18,11 @@
   --surface-hover: #f1f5f9;
   --surface-alt: #fcfcfc;
 
+  /* Table row states */
+  --bg-stripe: #f9f9f9;
+  --bg-hover: #f0f0f0;
+  --bg-selected: #f0f7ff;
+
   --header-bg: #0f172a;
   --header-text: #ffffff;
 
@@ -49,6 +54,9 @@
   /* Table adjustments */
   --table-header-bg: #1e293b;
   --table-row-hover: #334155;
+  --bg-stripe: #1a2332;
+  --bg-hover: #334155;
+  --bg-selected: #1e3a5f;
 }
 
 
@@ -1125,7 +1133,7 @@ button { font-family: inherit; }
 }
 
 .data-table tr:last-child td { border-bottom: none; }
-.data-table tbody tr:hover { background-color: #f8fafc; }
+.data-table tbody tr:hover { background-color: var(--bg-hover, #f8fafc); }
 
 .table-actions { display: flex; gap: 8px; }
 
