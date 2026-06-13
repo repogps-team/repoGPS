@@ -1,9 +1,11 @@
-import { useState, useEffect, useCallback, Fragment } from 'react'
+import { useState, useEffect, useCallback, useMemo, Fragment } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { UploadModal } from '../upload/UploadModal'
 import { DocumentTimeline } from '../upload/DocumentTimeline'
 import FormRenderer from '../forms/FormRenderer'
 import { useApi } from '../../hooks/useApi'
+import DataTable from '../shared/DataTable'
+import { formatDate } from '../shared/shared/ColumnHelpers'
 
 const ExpedienteDetalle = ({
   expediente,
@@ -34,7 +36,6 @@ const ExpedienteDetalle = ({
   }, [handleSyncComplete])
   const [showNuevaVersionModal, setShowNuevaVersionModal] = useState(false)
   const [documentoParaNuevaVersion, setDocumentoParaNuevaVersion] = useState(null)
-  const [expandedDocId, setExpandedDocId] = useState(null)
   const [formulariosAsignados, setFormulariosAsignados] = useState([])
   const [expandedFormId, setExpandedFormId] = useState(null)
   const [expandedFormDetail, setExpandedFormDetail] = useState(null) // schema + respuestas completas
@@ -235,6 +236,181 @@ const ExpedienteDetalle = ({
     setDocumentoParaNuevaVersion(null)
   }
 
+  // Column definitions for Historial table
+  const historialColumns = useMemo(() => [
+    {
+      accessorKey: 'fecha_cambio',
+      header: 'Fecha',
+      cell: (info) => formatDate(info.getValue()),
+      meta: { priority: 'high' }
+    },
+    {
+      accessorKey: 'etapa_anterior_nombre',
+      header: 'De',
+      cell: (info) => info.getValue() || '-',
+      meta: { priority: 'medium' }
+    },
+    {
+      accessorKey: 'etapa_nueva_nombre',
+      header: 'A',
+      cell: (info) => info.getValue() || '-',
+      meta: { priority: 'medium' }
+    },
+    {
+      accessorKey: 'usuario_nombre',
+      header: 'Usuario',
+      cell: (info) => info.getValue() || '-',
+      meta: { priority: 'high' }
+    },
+    {
+      accessorKey: 'observacion',
+      header: 'Observación',
+      cell: (info) => info.getValue() || '-',
+      meta: { priority: 'medium' }
+    }
+  ], [])
+
+  // Column definitions for Documentos table
+  const documentosColumns = useMemo(() => [
+    {
+      accessorKey: 'nombre_archivo',
+      header: 'Nombre',
+      cell: (info) => info.getValue(),
+      meta: { priority: 'high' }
+    },
+    {
+      accessorKey: 'tipo_mime',
+      header: 'Tipo',
+      cell: (info) => info.getValue(),
+      meta: { priority: 'medium' }
+    },
+    {
+      accessorKey: 'tamano_bytes',
+      header: 'Tamaño',
+      cell: (info) => `${(info.getValue() / 1024).toFixed(1)} KB`,
+      meta: { priority: 'low' }
+    },
+    {
+      accessorKey: 'version',
+      header: 'Versión',
+      cell: (info) => `v${info.getValue() || 1}`,
+      meta: { priority: 'low' }
+    },
+    {
+      accessorKey: 'fecha_upload',
+      header: 'Fecha',
+      cell: (info) => formatDate(info.getValue()),
+      meta: { priority: 'medium' }
+    },
+    {
+      id: 'acciones',
+      header: 'Acciones',
+      enableSorting: false,
+      cell: (info) => (
+        <div style={{ display: 'flex', gap: '4px' }}>
+          <button
+            className="btn btn-small"
+            onClick={() => handleDownloadDocumento(info.row.original)}
+            title="Descargar"
+          >
+            <span className="material-icons" style={{ fontSize: '18px' }}>file_download</span>
+          </button>
+          <button
+            className="btn btn-small btn-primary"
+            onClick={() => handleNuevaVersion(info.row.original)}
+            title="Nueva versión"
+          >
+            <span className="material-icons" style={{ fontSize: '18px' }}>add</span>
+          </button>
+        </div>
+      ),
+      meta: { priority: 'high' }
+    }
+  ], [])
+
+  // Column definitions for Formularios table
+  const formulariosColumns = useMemo(() => [
+    {
+      accessorKey: 'nombre',
+      header: 'Nombre del Formulario',
+      cell: (info) => info.getValue(),
+      meta: { priority: 'high' }
+    },
+    {
+      accessorKey: 'respuestas_count',
+      header: 'Respuestas',
+      cell: (info) => info.getValue() || 0,
+      meta: { priority: 'medium' }
+    },
+    {
+      id: 'acciones',
+      header: 'Acciones',
+      enableSorting: false,
+      cell: (info) => (
+        <div style={{ display: 'flex', gap: '4px' }}>
+          {info.row.original.puede_responder ? (
+            <button
+              className="btn-mini btn-edit"
+              onClick={() => handleStartRespond(info.row.original)}
+            >
+              Responder
+            </button>
+          ) : (
+            <span className="role-tag">Solo lectura</span>
+          )}
+        </div>
+      ),
+      meta: { priority: 'high' }
+    }
+  ], [])
+
+  // Render expanded content for Documentos
+  const renderDocumentoExpanded = useCallback((row) => {
+    const doc = row.original
+    return (
+      <div className="expanded-row-container">
+        <DocumentTimeline documentoId={doc.id} documento={doc} />
+      </div>
+    )
+  }, [])
+
+  // Render expanded content for Formularios
+  const renderFormularioExpanded = useCallback((row) => {
+    const form = row.original
+    return (
+      <div className="expanded-row-container" style={{ padding: '16px' }}>
+        {expandedFormDetail && expandedFormDetail.respuestas && expandedFormDetail.respuestas.length > 0 ? (
+          expandedFormDetail.respuestas.map(r => (
+            <div key={r.id} style={{ marginBottom: '8px', padding: '8px', background: 'var(--bg-secondary, #f5f5f5)', borderRadius: '4px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted, #666)' }}>
+                  {r.usuario_nombre || '-'} — {new Date(r.fecha_envio).toLocaleString()}
+                </span>
+                <button
+                  className="btn-mini"
+                  onClick={() => setViewingResponse(viewingResponse?.id === r.id ? null : r)}
+                >
+                  {viewingResponse?.id === r.id ? 'Ocultar' : 'Ver'}
+                </button>
+              </div>
+              {viewingResponse?.id === r.id && expandedFormDetail.schema && (
+                <div className="formio-renderer-wrapper">
+                  <FormRenderer
+                    formDefinition={{ id: form.id, schema: expandedFormDetail.schema }}
+                    submissionData={r.data}
+                    readOnly={true}
+                  />
+                </div>
+              )}
+            </div>
+          ))
+        ) : (
+          <p className="empty-text">Sin respuestas aún</p>
+        )}
+      </div>
+    )
+  }, [expandedFormDetail, viewingResponse])
+
   return (
     <>
       {/* Expediente Detail Modal */}
@@ -310,159 +486,54 @@ const ExpedienteDetalle = ({
             <div className="exp-section">
               <h4>Historial</h4>
               {historial.length > 0 ? (
-                <table className="users-table">
-                  <thead><tr><th>Fecha</th><th>De</th><th>A</th><th>Usuario</th><th>Observación</th></tr></thead>
-                  <tbody>
-                    {historial.map(h => (
-                      <tr key={h.id}>
-                        <td>{new Date(h.fecha_cambio).toLocaleString()}</td>
-                        <td>{h.etapa_anterior_nombre || '-'}</td>
-                        <td>{h.etapa_nueva_nombre || '-'}</td>
-                        <td>{h.usuario_nombre || '-'}</td>
-                        <td>{h.observacion || '-'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <DataTable
+                  data={historial}
+                  columns={historialColumns}
+                  config={{
+                    searchable: false,
+                    sortable: true,
+                    pagination: historial.length > 10,
+                    emptyMessage: 'Sin cambios de etapa registrados'
+                  }}
+                />
               ) : <p className="empty-text">Sin cambios de etapa registrados</p>}
             </div>
 
             <div className="exp-section">
               <h4>Documentos</h4>
               {documentos.length > 0 ? (
-                <table className="users-table">
-                  <thead><tr><th>Nombre</th><th>Tipo</th><th>Tamaño</th><th>Versión</th><th>Fecha</th><th>Acciones</th></tr></thead>
-                  <tbody>
-                    {documentos.map(d => (
-                      <>
-                        <tr key={d.id}>
-                          <td>
-                            <button
-                              className="doc-name-toggle"
-                              onClick={() => setExpandedDocId(expandedDocId === d.id ? null : d.id)}
-                              title={expandedDocId === d.id ? 'Ocultar versiones' : 'Ver versiones'}
-                            >
-                              <span className="toggle-icon">{expandedDocId === d.id ? '▼' : '▶'}</span>
-                              {d.nombre_archivo}
-                            </button>
-                          </td>
-                          <td>{d.tipo_mime}</td>
-                          <td>{(d.tamano_bytes / 1024).toFixed(1)} KB</td>
-                          <td>v{d.version || 1}</td>
-                          <td>{new Date(d.fecha_upload).toLocaleDateString()}</td>
-                          <td>
-                            <button
-                              className="btn btn-small"
-                              onClick={() => handleDownloadDocumento(d)}
-                              title="Descargar"
-                            >
-                              📥
-                            </button>
-                            <button
-                              className="btn btn-small btn-primary"
-                              onClick={() => handleNuevaVersion(d)}
-                              title="Nueva versión"
-                              style={{ marginLeft: '4px' }}
-                            >
-                              ➕
-                            </button>
-                          </td>
-                        </tr>
-                        {expandedDocId === d.id && (
-                          <tr key={`${d.id}-timeline`}>
-                            <td colSpan={6}>
-                              <DocumentTimeline documentoId={d.id} documento={d} />
-                            </td>
-                          </tr>
-                        )}
-                      </>
-                    ))}
-                  </tbody>
-                </table>
+                <DataTable
+                  data={documentos}
+                  columns={documentosColumns}
+                  config={{
+                    searchable: false,
+                    sortable: true,
+                    pagination: documentos.length > 10,
+                    emptyMessage: 'Sin documentos adjuntos',
+                    enableExpanding: true,
+                    singleExpanding: true
+                  }}
+                  renderExpanded={renderDocumentoExpanded}
+                />
               ) : <p className="empty-text">Sin documentos adjuntos</p>}
             </div>
 
             <div className="exp-section">
               <h4>Formularios Asignados</h4>
               {formulariosAsignados.length > 0 ? (
-                <>
-                  <table className="users-table">
-                    <thead>
-                      <tr>
-                        <th>Nombre del Formulario</th>
-                        <th>Respuestas</th>
-                        <th>Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {formulariosAsignados.map(f => (
-                        <>
-                          <tr key={f.id}>
-                            <td>
-                              <button
-                                className="doc-name-toggle"
-                                onClick={() => handleExpandForm(f)}
-                                title={expandedFormId === f.id ? 'Ocultar respuestas' : 'Ver respuestas'}
-                              >
-                                <span className="toggle-icon">{expandedFormId === f.id ? '▼' : '▶'}</span>
-                                {f.nombre}
-                              </button>
-                            </td>
-                            <td>{f.respuestas_count || 0}</td>
-                            <td>
-                              {f.puede_responder ? (
-                                <button
-                                  className="btn-mini btn-edit"
-                                  onClick={() => handleStartRespond(f)}
-                                >
-                                  Responder
-                                </button>
-                              ) : (
-                                <span className="role-tag">Solo lectura</span>
-                              )}
-                            </td>
-                          </tr>
-                          {expandedFormId === f.id && expandedFormDetail && (
-                            <tr key={`${f.id}-responses`}>
-                              <td colSpan={3}>
-                                <div style={{ padding: '8px 0' }}>
-                                  {expandedFormDetail.respuestas && expandedFormDetail.respuestas.length > 0 ? (
-                                    expandedFormDetail.respuestas.map(r => (
-                                      <div key={r.id} style={{ marginBottom: '8px', padding: '8px', background: 'var(--bg-secondary, #f5f5f5)', borderRadius: '4px' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                                          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted, #666)' }}>
-                                            {r.usuario_nombre || '-'} — {new Date(r.fecha_envio).toLocaleString()}
-                                          </span>
-                                          <button
-                                            className="btn-mini"
-                                            onClick={() => setViewingResponse(viewingResponse?.id === r.id ? null : r)}
-                                          >
-                                            {viewingResponse?.id === r.id ? 'Ocultar' : 'Ver'}
-                                          </button>
-                                        </div>
-                                        {viewingResponse?.id === r.id && expandedFormDetail.schema && (
-                                          <div className="formio-renderer-wrapper">
-                                            <FormRenderer
-                                              formDefinition={{ id: f.id, schema: expandedFormDetail.schema }}
-                                              submissionData={r.data}
-                                              readOnly={true}
-                                            />
-                                          </div>
-                                        )}
-                                      </div>
-                                    ))
-                                  ) : (
-                                    <p className="empty-text">Sin respuestas aún</p>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                          )}
-                        </>
-                      ))}
-                    </tbody>
-                  </table>
-                </>
+                <DataTable
+                  data={formulariosAsignados}
+                  columns={formulariosColumns}
+                  config={{
+                    searchable: false,
+                    sortable: true,
+                    pagination: formulariosAsignados.length > 10,
+                    emptyMessage: 'Sin formularios asignados',
+                    enableExpanding: true,
+                    singleExpanding: true
+                  }}
+                  renderExpanded={renderFormularioExpanded}
+                />
               ) : <p className="empty-text">Sin formularios asignados</p>}
             </div>
           </div>
