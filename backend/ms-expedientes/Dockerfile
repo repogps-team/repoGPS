@@ -7,6 +7,7 @@ RUN npm install
 
 COPY index.js ./
 COPY src ./src
+COPY lib ./lib
 
 EXPOSE 3002
 

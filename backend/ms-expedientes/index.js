@@ -12,6 +12,7 @@ const {
   procesoCreatedTotal,
   etapaCreatedTotal
 } = require("./src/metrics");
+const { emitAudit } = require("./lib/auditClient");
 
 // Storage client for GarageHQ
 const storage = require("./src/storage/garageClient");
@@ -581,6 +582,18 @@ app.post("/api/procesos", async (req, res) => {
     );
     procesoCreatedTotal.inc();
     res.status(201).json(result.rows[0]);
+
+    emitAudit({
+      usuario_id: req.user?.id || null,
+      usuario_nombre: req.user?.nombre_completo || null,
+      accion: "CREATE",
+      entidad: "proceso",
+      entidad_id: result.rows[0].id,
+      entidad_nombre: nombre,
+      valor_nuevo: { area_id, nombre, descripcion },
+      ip: req.ip,
+      user_agent: req.get("user-agent"),
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -608,6 +621,18 @@ app.put("/api/procesos/:id", async (req, res) => {
       return res.status(404).json({ error: "Proceso no encontrado" });
     }
     res.json(result.rows[0]);
+
+    emitAudit({
+      usuario_id: req.user?.id || null,
+      usuario_nombre: req.user?.nombre_completo || null,
+      accion: "UPDATE",
+      entidad: "proceso",
+      entidad_id: Number(id),
+      entidad_nombre: nombre,
+      valor_nuevo: { area_id, nombre, descripcion },
+      ip: req.ip,
+      user_agent: req.get("user-agent"),
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -636,6 +661,16 @@ app.delete("/api/procesos/:id", async (req, res) => {
 
     await pool.query("UPDATE procesos SET estado_activo = false WHERE id = $1", [id]);
     res.json({ message: "Proceso eliminado lógicamente" });
+
+    emitAudit({
+      usuario_id: req.user?.id || null,
+      usuario_nombre: req.user?.nombre_completo || null,
+      accion: "DEACTIVATE",
+      entidad: "proceso",
+      entidad_id: Number(id),
+      ip: req.ip,
+      user_agent: req.get("user-agent"),
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -653,6 +688,16 @@ app.patch("/api/procesos/:id/estado", async (req, res) => {
       return res.status(404).json({ error: "Proceso no encontrado" });
     }
     res.json(result.rows[0]);
+
+    emitAudit({
+      usuario_id: req.user?.id || null,
+      usuario_nombre: req.user?.nombre_completo || null,
+      accion: estado_activo ? "ACTIVATE" : "DEACTIVATE",
+      entidad: "proceso",
+      entidad_id: Number(id),
+      ip: req.ip,
+      user_agent: req.get("user-agent"),
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -738,6 +783,18 @@ app.post("/api/etapas-proceso", async (req, res) => {
     await client.query('COMMIT');
     etapaCreatedTotal.inc();
     res.status(201).json(result.rows[0]);
+
+    emitAudit({
+      usuario_id: req.user?.id || null,
+      usuario_nombre: req.user?.nombre_completo || null,
+      accion: "CREATE",
+      entidad: "etapa",
+      entidad_id: result.rows[0].id,
+      entidad_nombre: nombre,
+      valor_nuevo: { proceso_id, nombre, orden, tipo_etapa, tipo_tarea, rol_id },
+      ip: req.ip,
+      user_agent: req.get("user-agent"),
+    });
   } catch (err) {
     await client.query('ROLLBACK');
     const isInvariant = err.message.includes("Solo puede existir") || err.message.includes("Ya existe una etapa activa con ese orden");
@@ -780,6 +837,18 @@ app.put("/api/etapas-proceso/:id", async (req, res) => {
     
     await client.query('COMMIT');
     res.json(result.rows[0]);
+
+    emitAudit({
+      usuario_id: req.user?.id || null,
+      usuario_nombre: req.user?.nombre_completo || null,
+      accion: "UPDATE",
+      entidad: "etapa",
+      entidad_id: Number(id),
+      entidad_nombre: nombre,
+      valor_nuevo: { proceso_id, nombre, orden, tipo_etapa, tipo_tarea, rol_id },
+      ip: req.ip,
+      user_agent: req.get("user-agent"),
+    });
   } catch (err) {
     await client.query('ROLLBACK');
     const isInvariant = err.message.includes("Solo puede existir") || err.message.includes("Ya existe una etapa activa con ese orden");
@@ -822,6 +891,16 @@ app.delete("/api/etapas-proceso/:id", async (req, res) => {
     await client.query("UPDATE etapas_proceso SET estado_activo = false WHERE id = $1", [id]);
     await client.query('COMMIT');
     res.json({ message: "Etapa eliminada lógicamente" });
+
+    emitAudit({
+      usuario_id: req.user?.id || null,
+      usuario_nombre: req.user?.nombre_completo || null,
+      accion: "DEACTIVATE",
+      entidad: "etapa",
+      entidad_id: Number(id),
+      ip: req.ip,
+      user_agent: req.get("user-agent"),
+    });
   } catch (err) {
     await client.query('ROLLBACK');
     res.status(500).json({ error: err.message });
@@ -842,6 +921,16 @@ app.patch("/api/etapas-proceso/:id/estado", async (req, res) => {
       return res.status(404).json({ error: "Etapa no encontrada" });
     }
     res.json(result.rows[0]);
+
+    emitAudit({
+      usuario_id: req.user?.id || null,
+      usuario_nombre: req.user?.nombre_completo || null,
+      accion: estado_activo ? "ACTIVATE" : "DEACTIVATE",
+      entidad: "etapa",
+      entidad_id: Number(id),
+      ip: req.ip,
+      user_agent: req.get("user-agent"),
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -1010,6 +1099,18 @@ app.post("/api/expedientes", async (req, res) => {
     );
     documentoUploadedTotal.inc();
     res.status(201).json(result.rows[0]);
+
+    emitAudit({
+      usuario_id: req.user?.id || null,
+      usuario_nombre: req.user?.nombre_completo || null,
+      accion: "CREATE",
+      entidad: "expediente",
+      entidad_id: result.rows[0].id,
+      entidad_nombre: titulo,
+      valor_nuevo: { proceso_id, disciplina_id, subtipo_id, titulo, descripcion, fecha_termino },
+      ip: req.ip,
+      user_agent: req.get("user-agent"),
+    });
   } catch (err) {
     uploadErrorsTotal.inc();
     res.status(500).json({ error: err.message });
@@ -1025,6 +1126,37 @@ app.put("/api/expedientes/:id", async (req, res) => {
        etapa_actual_id = $4, titulo = $5, descripcion = $6, fecha_termino = $7, fecha_actualizacion = CURRENT_TIMESTAMP
        WHERE id = $8 RETURNING *`,
       [proceso_id, disciplina_id, subtipo_id, etapa_actual_id, titulo, descripcion, fecha_termino || null, id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Expediente no encontrado" });
+    }
+    res.json(result.rows[0]);
+
+    emitAudit({
+      usuario_id: req.user?.id || null,
+      usuario_nombre: req.user?.nombre_completo || null,
+      accion: "UPDATE",
+      entidad: "expediente",
+      entidad_id: Number(id),
+      entidad_nombre: titulo,
+      valor_nuevo: { proceso_id, disciplina_id, subtipo_id, etapa_actual_id, titulo, descripcion, fecha_termino },
+      ip: req.ip,
+      user_agent: req.get("user-agent"),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /api/expedientes/:id/fecha-termino - Actualizar solo fecha de término
+app.patch("/api/expedientes/:id/fecha-termino", authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  const { fecha_termino } = req.body;
+  try {
+    const result = await pool.query(
+      `UPDATE expedientes SET fecha_termino = $1, fecha_actualizacion = CURRENT_TIMESTAMP
+       WHERE id = $2 RETURNING *`,
+      [fecha_termino || null, id]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: "Expediente no encontrado" });
@@ -1091,6 +1223,18 @@ app.post("/api/expedientes/:id/avanzar", authMiddleware, async (req, res) => {
     }
 
     res.json({ message: "Expediente avanzado", nueva_etapa: avanzarResult.nueva_etapa, expediente: { ...exp, estado } });
+
+    emitAudit({
+      usuario_id,
+      usuario_nombre: null,
+      accion: "ADVANCE",
+      entidad: "expediente",
+      entidad_id: Number(id),
+      entidad_nombre: exp?.titulo,
+      valor_nuevo: { etapa_anterior: exp?.etapa_actual_id, etapa_nueva: avanzarResult.nueva_etapa?.id, observacion },
+      ip: req.ip,
+      user_agent: req.get("user-agent"),
+    });
   } catch (err) {
     const statusCode = err.statusCode || 500;
     res.status(statusCode).json({ error: err.message });
@@ -1196,6 +1340,18 @@ app.post("/api/expedientes/:id/devolver", authMiddleware, async (req, res) => {
     }
 
     res.json({ message: "Expediente devuelto", etapa_anterior: etapaAnterior, expediente: { ...exp, estado } });
+
+    emitAudit({
+      usuario_id,
+      usuario_nombre: null,
+      accion: "REJECT",
+      entidad: "expediente",
+      entidad_id: Number(id),
+      entidad_nombre: exp?.titulo,
+      valor_nuevo: { etapa_anterior: expediente.etapa_actual_id, etapa_nueva: etapaAnterior.id, observacion },
+      ip: req.ip,
+      user_agent: req.get("user-agent"),
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -1354,6 +1510,18 @@ app.post("/api/expedientes/:id/rechazar", authMiddleware, async (req, res) => {
     `, [id]);
 
     res.json({ message: "Expediente rechazado", expediente: { ...updated.rows[0], estado: 'Rechazado' } });
+
+    emitAudit({
+      usuario_id,
+      usuario_nombre: null,
+      accion: "REJECT",
+      entidad: "expediente",
+      entidad_id: Number(id),
+      entidad_nombre: updated.rows[0]?.titulo,
+      valor_nuevo: { observacion },
+      ip: req.ip,
+      user_agent: req.get("user-agent"),
+    });
   } catch (err) {
     const statusCode = err.statusCode || 500;
     res.status(statusCode).json({ error: err.message });
@@ -1365,6 +1533,16 @@ app.delete("/api/expedientes/:id", async (req, res) => {
   try {
     await pool.query("UPDATE expedientes SET estado_activo = false WHERE id = $1", [id]);
     res.json({ message: "Expediente eliminado lógicamente" });
+
+    emitAudit({
+      usuario_id: req.user?.id || null,
+      usuario_nombre: req.user?.nombre_completo || null,
+      accion: "DEACTIVATE",
+      entidad: "expediente",
+      entidad_id: Number(id),
+      ip: req.ip,
+      user_agent: req.get("user-agent"),
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -1408,6 +1586,18 @@ app.post("/api/documentos", async (req, res) => {
       [expediente_id, nombre_archivo, ruta_archivo, tipo_mime, tamano_bytes]
     );
     res.status(201).json(result.rows[0]);
+
+    emitAudit({
+      usuario_id: req.user?.id || null,
+      usuario_nombre: req.user?.nombre_completo || null,
+      accion: "CREATE",
+      entidad: "documento",
+      entidad_id: result.rows[0].id,
+      entidad_nombre: nombre_archivo,
+      valor_nuevo: { expediente_id, nombre_archivo, tipo_mime, tamano_bytes },
+      ip: req.ip,
+      user_agent: req.get("user-agent"),
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -1418,6 +1608,16 @@ app.delete("/api/documentos/:id", async (req, res) => {
   try {
     await pool.query("UPDATE documentos SET estado_activo = false WHERE id = $1", [id]);
     res.json({ message: "Documento eliminado lógicamente" });
+
+    emitAudit({
+      usuario_id: req.user?.id || null,
+      usuario_nombre: req.user?.nombre_completo || null,
+      accion: "DEACTIVATE",
+      entidad: "documento",
+      entidad_id: Number(id),
+      ip: req.ip,
+      user_agent: req.get("user-agent"),
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -1520,6 +1720,18 @@ app.post("/api/documentos/upload", authMiddleware, upload.single("archivo"), asy
       version: newDoc.version,
       es_version_actual: newDoc.es_version_actual,
       fecha_upload: newDoc.fecha_upload
+    });
+
+    emitAudit({
+      usuario_id: usuarioId,
+      usuario_nombre: null,
+      accion: "UPLOAD",
+      entidad: "documento",
+      entidad_id: newDoc.id,
+      entidad_nombre: newDoc.nombre_archivo,
+      valor_nuevo: { expediente_id, nombre_archivo: newDoc.nombre_archivo, version: newDoc.version },
+      ip: req.ip,
+      user_agent: req.get("user-agent"),
     });
   } catch (err) {
     await client.query("ROLLBACK");
@@ -1703,6 +1915,19 @@ app.post("/api/documentos/:id/versiones", authMiddleware, upload.single("archivo
       fecha_upload: updatedDoc.fecha_upload,
       mensaje: `Nueva versión ${newVersion} creada exitosamente`
     });
+
+    emitAudit({
+      usuario_id: usuarioId,
+      usuario_nombre: null,
+      accion: "NEW_VERSION",
+      entidad: "documento",
+      entidad_id: documentoId,
+      entidad_nombre: updatedDoc.nombre_archivo,
+      valor_anterior: { version: currentVersion },
+      valor_nuevo: { version: newVersion },
+      ip: req.ip,
+      user_agent: req.get("user-agent"),
+    });
   } catch (err) {
     await client.query("ROLLBACK");
     uploadErrorsTotal.inc();
@@ -1776,6 +2001,17 @@ app.get("/api/documentos/:id/descargar/:version?", async (req, res) => {
       });
       
       res.send(fileData);
+
+      emitAudit({
+        usuario_id: req.user?.id || null,
+        usuario_nombre: req.user?.nombre_completo || null,
+        accion: "DOWNLOAD",
+        entidad: "documento",
+        entidad_id: Number(id),
+        entidad_nombre: doc.nombre_archivo,
+        ip: req.ip,
+        user_agent: req.get("user-agent"),
+      });
     } catch (storageErr) {
       console.error("[download] Storage error:", storageErr.message);
       return res.status(500).json({ error: "Error al descargar archivo" });
@@ -1835,6 +2071,16 @@ app.delete("/api/documentos/:id Completo", async (req, res) => {
     
     await client.query("COMMIT");
     res.json({ message: "Documento y todas sus versiones eliminadas" });
+
+    emitAudit({
+      usuario_id: req.user?.id || null,
+      usuario_nombre: req.user?.nombre_completo || null,
+      accion: "DELETE",
+      entidad: "documento",
+      entidad_id: Number(id),
+      ip: req.ip,
+      user_agent: req.get("user-agent"),
+    });
   } catch (err) {
     await client.query("ROLLBACK");
     res.status(500).json({ error: err.message });
@@ -2144,6 +2390,17 @@ app.patch("/api/tareas/:id", async (req, res) => {
     }
 
     res.json(result.rows[0]);
+
+    emitAudit({
+      usuario_id,
+      usuario_nombre: null,
+      accion: "RESPOND",
+      entidad: "tarea",
+      entidad_id: Number(id),
+      valor_nuevo: { estado, observacion },
+      ip: req.ip,
+      user_agent: req.get("user-agent"),
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

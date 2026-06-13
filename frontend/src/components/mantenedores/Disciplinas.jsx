@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useDisciplinas } from '../../hooks/useDisciplinas'
+import DataTable from '../shared/DataTable'
 
 const DisciplinasPanel = () => {
   const {
@@ -17,13 +18,10 @@ const DisciplinasPanel = () => {
   const [formData, setFormData] = useState({ nombre: '', area_id: '', contratista_id: '' })
   const [editandoId, setEditandoId] = useState(null)
   const [tabActiva, setTabActiva] = useState('activos')
-  const [busqueda, setBusqueda] = useState('')
 
   useEffect(() => {
     Promise.all([cargarDisciplinas(), cargarAreas(), cargarContratistas()])
   }, [cargarDisciplinas, cargarAreas, cargarContratistas])
-
-  const limpiarBusqueda = () => setBusqueda('')
 
   const limpiarFormulario = () => {
     setFormData({ nombre: '', area_id: '', contratista_id: '' })
@@ -45,33 +43,55 @@ const DisciplinasPanel = () => {
     }
   }
 
-  const handleEditar = (d) => {
+  const handleEditar = useCallback((d) => {
     setFormData({ 
       nombre: d.nombre, 
       area_id: String(d.area_id), 
       contratista_id: String(d.contratista_id || '') 
     })
     setEditandoId(d.id)
-  }
+  }, [])
 
-  const handleCambiarEstado = async (id, nuevoEstado) => {
+  const handleCambiarEstado = useCallback(async (id, nuevoEstado) => {
     try {
       await cambiarEstado(id, nuevoEstado)
       cargarDisciplinas()
     } catch (err) {
       alert(err.message)
     }
-  }
+  }, [cambiarEstado, cargarDisciplinas])
 
-  const filtrarData = (lista) => {
-    return lista
-      .filter(item => tabActiva === 'activos' ? item.estado_activo : !item.estado_activo)
-      .filter(item => {
-        const s = busqueda.toLowerCase()
-        return item.nombre?.toLowerCase().includes(s) || 
-               item.area_nombre?.toLowerCase().includes(s)
-      })
-  }
+  const filteredData = useMemo(() => {
+    return disciplinas.filter(d => tabActiva === 'activos' ? d.estado_activo : !d.estado_activo)
+  }, [disciplinas, tabActiva])
+
+  const columns = useMemo(() => [
+    {
+      accessorKey: 'nombre',
+      header: 'Disciplina',
+      meta: { priority: 'high' }
+    },
+    {
+      accessorKey: 'area_nombre',
+      header: 'Área',
+      cell: (info) => info.getValue() || 'No asignada',
+      meta: { priority: 'medium' }
+    },
+    {
+      id: 'acciones',
+      header: 'Acciones',
+      enableSorting: false,
+      cell: (info) => (
+        <div className="actions-cell">
+          <button className="btn-mini btn-edit" onClick={() => handleEditar(info.row.original)}>Editar</button>
+          <button className="btn-mini btn-danger" onClick={() => handleCambiarEstado(info.row.original.id, !info.row.original.estado_activo)}>
+            {info.row.original.estado_activo ? 'Borrar' : 'Reactivar'}
+          </button>
+        </div>
+      ),
+      meta: { priority: 'high' }
+    }
+  ], [handleEditar, handleCambiarEstado])
 
   const getTitulo = () => editandoId ? 'Modificar' : 'Registrar'
 
@@ -126,45 +146,22 @@ const DisciplinasPanel = () => {
       <section className="panel">
         <div className="panel-top table-top">
           <div className="tabs">
-            <button className={`tab-btn ${tabActiva === 'activos' ? 'active' : ''}`} onClick={() => { setTabActiva('activos'); limpiarBusqueda(); }}>Activos</button>
-            <button className={`tab-btn ${tabActiva === 'inactivos' ? 'active' : ''}`} onClick={() => { setTabActiva('inactivos'); limpiarBusqueda(); }}>Inactivos</button>
-          </div>
-          <div className="table-controls">
-            <div className="search-wrapper">
-              <span className="search-icon"></span>
-              <input 
-                type="text" 
-                className="search-input"
-                placeholder="Buscar..." 
-                value={busqueda} 
-                onChange={e => setBusqueda(e.target.value)} 
-              />
-            </div>
+            <button className={`tab-btn ${tabActiva === 'activos' ? 'active' : ''}`} onClick={() => setTabActiva('activos')}>Activos</button>
+            <button className={`tab-btn ${tabActiva === 'inactivos' ? 'active' : ''}`} onClick={() => setTabActiva('inactivos')}>Inactivos</button>
           </div>
         </div>
-        <div className="table-wrap">
-          <table className="users-table">
-            <thead>
-              <tr>
-                <th>Disciplina</th>
-                <th>Área</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtrarData(disciplinas).map(d => (
-                <tr key={d.id}>
-                  <td>{d.nombre}</td>
-                  <td>{d.area_nombre || 'No asignada'}</td>
-                  <td>
-                    <button className="btn-mini btn-edit" onClick={() => handleEditar(d)}>Editar</button>
-                    <button className="btn-mini btn-danger" onClick={() => handleCambiarEstado(d.id, !d.estado_activo)}>{d.estado_activo ? 'Borrar' : 'Reactivar'}</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          data={filteredData}
+          columns={columns}
+          config={{
+            searchable: true,
+            searchPlaceholder: 'Buscar disciplina...',
+            sortable: true,
+            pagination: true,
+            pageSize: 10,
+            emptyMessage: 'No hay disciplinas en esta categoría'
+          }}
+        />
       </section>
     </>
   )

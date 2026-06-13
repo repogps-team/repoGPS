@@ -5,6 +5,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
 const { metricsHandler, metricsMiddleware, loginTotal, userCreatedTotal } = require("./src/metrics");
+const { emitAudit } = require("./lib/auditClient");
 
 const app = express();
 app.use(cors());
@@ -106,6 +107,19 @@ app.post("/api/usuarios", async (req, res) => {
 
     userCreatedTotal.inc();
     res.status(201).json(nuevoUsuario);
+
+    emitAudit({
+      usuario_id: req.user?.id || null,
+      usuario_nombre: req.user?.nombre_completo || null,
+      usuario_email: req.user?.correo || null,
+      accion: "CREATE",
+      entidad: "usuario",
+      entidad_id: nuevoUsuario.id,
+      entidad_nombre: nuevoUsuario.nombre_completo,
+      valor_nuevo: { nombre_completo, correo, rol_id },
+      ip: req.ip,
+      user_agent: req.get("user-agent"),
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -255,6 +269,19 @@ app.put("/api/usuarios/:id", async (req, res) => {
 
     await pool.query("COMMIT");
     res.json({ message: "Usuario y área actualizados correctamente" });
+
+    emitAudit({
+      usuario_id: req.user?.id || null,
+      usuario_nombre: req.user?.nombre_completo || null,
+      usuario_email: req.user?.correo || null,
+      accion: "UPDATE",
+      entidad: "usuario",
+      entidad_id: Number(id),
+      entidad_nombre: nombre_completo,
+      valor_nuevo: { rol_id, area_id, nombre_completo, correo },
+      ip: req.ip,
+      user_agent: req.get("user-agent"),
+    });
   } catch (err) {
     await pool.query("ROLLBACK");
     console.error(err);
@@ -272,6 +299,17 @@ app.patch("/api/usuarios/:id/estado", async (req, res) => {
       id,
     ]);
     res.json({ message: "Estado actualizado correctamente" });
+
+    emitAudit({
+      usuario_id: req.user?.id || null,
+      usuario_nombre: req.user?.nombre_completo || null,
+      usuario_email: req.user?.correo || null,
+      accion: estado_activo ? "ACTIVATE" : "DEACTIVATE",
+      entidad: "usuario",
+      entidad_id: Number(id),
+      ip: req.ip,
+      user_agent: req.get("user-agent"),
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -354,6 +392,16 @@ async function migrarPasswords() {
 
 app.post("/api/logout", (req, res) => {
   res.json({ message: "Sesión cerrada correctamente" });
+
+  emitAudit({
+    usuario_id: req.user?.id || null,
+    usuario_nombre: req.user?.nombre_completo || null,
+    usuario_email: req.user?.correo || null,
+    accion: "LOGOUT",
+    entidad: "usuario",
+    ip: req.ip,
+    user_agent: req.get("user-agent"),
+  });
 });
 
 // Endpoint de login - valida credenciales y retorna token con datos del usuario
@@ -436,6 +484,18 @@ app.post("/api/login", async (req, res) => {
         area_id: areaId,
         area_nombre: areaNombre,
       },
+    });
+
+    emitAudit({
+      usuario_id: usuario.id,
+      usuario_nombre: usuario.nombre_completo,
+      usuario_email: usuario.correo,
+      accion: "LOGIN",
+      entidad: "usuario",
+      entidad_id: usuario.id,
+      entidad_nombre: usuario.nombre_completo,
+      ip: req.ip,
+      user_agent: req.get("user-agent"),
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

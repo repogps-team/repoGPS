@@ -1,0 +1,118 @@
+{
+  "uid": "dash-almacenamiento",
+  "title": "Reportes / Almacenamiento",
+  "tags": ["reportes", "almacenamiento", "documentos"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-30d", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "contratista",
+        "label": "Contratista",
+        "type": "query",
+        "datasource": "Expedientes DB",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": 0,
+        "multi": false,
+        "query": "SELECT id as __value, razon_social as __text FROM contratistas_mirror WHERE estado_activo = true ORDER BY razon_social",
+        "current": { "text": "All", "value": 0 }
+      },
+      {
+        "name": "area",
+        "label": "Área",
+        "type": "query",
+        "datasource": "Expedientes DB",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": 0,
+        "multi": false,
+        "query": "SELECT id as __value, nombre as __text FROM areas_mirror WHERE estado_activo = true AND (0 IN (${contratista:csv}) OR contratista_id IN (${contratista:csv})) ORDER BY nombre",
+        "current": { "text": "All", "value": 0 }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Uso Total de Almacenamiento",
+      "datasource": "Expedientes DB",
+      "gridPos": { "x": 0, "y": 0, "w": 8, "h": 6 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT pg_size_pretty(SUM(tamano_bytes)) AS total_almacenamiento, COUNT(*) AS total_documentos FROM documentos WHERE estado_activo = true"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Documentos Totales",
+      "datasource": "Expedientes DB",
+      "gridPos": { "x": 8, "y": 0, "w": 8, "h": 6 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT COUNT(*) AS total FROM documentos WHERE estado_activo = true"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Tamaño Promedio por Documento",
+      "datasource": "Expedientes DB",
+      "gridPos": { "x": 16, "y": 0, "w": 8, "h": 6 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT pg_size_pretty(AVG(tamano_bytes)) AS promedio FROM documentos WHERE estado_activo = true"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Crecimiento Mensual de Almacenamiento",
+      "datasource": "Expedientes DB",
+      "gridPos": { "x": 0, "y": 6, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT date_trunc('month', fecha_upload) AS time, SUM(tamano_bytes) / 1048576.0 AS value FROM documentos WHERE estado_activo = true GROUP BY 1 ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "type": "piechart",
+      "title": "Documentos por Tipo MIME",
+      "datasource": "Expedientes DB",
+      "gridPos": { "x": 12, "y": 6, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT mime_type, COUNT(*) AS total FROM documentos WHERE estado_activo = true GROUP BY mime_type ORDER BY total DESC"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Top 10 Archivos Más Pesados",
+      "datasource": "Expedientes DB",
+      "gridPos": { "x": 0, "y": 14, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT d.nombre_archivo, pg_size_pretty(d.tamano_bytes) AS tamano, d.mime_type, e.numero AS expediente, e.titulo FROM documentos d JOIN expedientes e ON d.expediente_id = e.id WHERE d.estado_activo = true ORDER BY d.tamano_bytes DESC LIMIT 10"
+        }
+      ]
+    }
+  ]
+}

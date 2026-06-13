@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useApi } from '../hooks/useApi'
+import DataTable from '../components/shared/DataTable'
 
 const ROLES = [
   { id: 1, nombre: 'Admin' },
@@ -19,13 +20,11 @@ const AdminTransiciones = () => {
   const [error, setError] = useState(null)
   const [mensaje, setMensaje] = useState(null)
 
-  // Form para nueva regla
   const [newEtapaFrom, setNewEtapaFrom] = useState('')
   const [newEtapaTo, setNewEtapaTo] = useState('')
   const [newRol, setNewRol] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  // Cargar procesos al montar
   useEffect(() => {
     const cargarProcesos = async () => {
       try {
@@ -38,7 +37,6 @@ const AdminTransiciones = () => {
     cargarProcesos()
   }, [get])
 
-  // Cargar etapas y reglas cuando se selecciona un proceso
   const cargarEtapas = useCallback(async (procesoId) => {
     if (!procesoId) {
       setEtapas([])
@@ -122,7 +120,7 @@ const AdminTransiciones = () => {
     }
   }
 
-  const handleEliminarRegla = async (id) => {
+  const handleEliminarRegla = useCallback(async (id) => {
     if (!window.confirm('¿Esta seguro de eliminar esta regla de transicion?')) return
 
     setError(null)
@@ -134,12 +132,51 @@ const AdminTransiciones = () => {
     } catch (err) {
       setError(err.message)
     }
-  }
+  }, [del, cargarReglas, selectedProceso])
 
   const getRolNombre = (rolId) => {
     const rol = ROLES.find(r => r.id === rolId)
     return rol ? rol.nombre : `Rol #${rolId}`
   }
+
+  const columns = useMemo(() => [
+    {
+      accessorKey: 'etapa_from_nombre',
+      header: 'Etapa Origen',
+      cell: (info) => info.getValue() || `Etapa #${info.row.original.etapa_from_id}`,
+      meta: { priority: 'high' }
+    },
+    {
+      id: 'flecha',
+      header: '→',
+      cell: () => '→',
+      enableSorting: false,
+      meta: { priority: 'high' }
+    },
+    {
+      accessorKey: 'etapa_to_nombre',
+      header: 'Etapa Destino',
+      cell: (info) => info.getValue() || `Etapa #${info.row.original.etapa_to_id}`,
+      meta: { priority: 'high' }
+    },
+    {
+      accessorKey: 'rol_id',
+      header: 'Rol Permitido',
+      cell: (info) => <span className="role-tag">{getRolNombre(info.getValue())}</span>,
+      meta: { priority: 'medium' }
+    },
+    {
+      id: 'acciones',
+      header: 'Acciones',
+      enableSorting: false,
+      cell: (info) => (
+        <button className="btn-mini btn-danger" onClick={() => handleEliminarRegla(info.row.original.id)}>
+          Eliminar
+        </button>
+      ),
+      meta: { priority: 'high' }
+    }
+  ], [handleEliminarRegla])
 
   return (
     <section className="panel">
@@ -162,7 +199,6 @@ const AdminTransiciones = () => {
 
       {selectedProceso && (
         <>
-          {/* Nueva regla */}
           <div className="exp-section" style={{ marginTop: '16px' }}>
             <h4>Agregar Regla de Transicion</h4>
             <form onSubmit={handleAgregarRegla} className="form-grid" style={{ gridTemplateColumns: '1fr 1fr 1fr auto' }}>
@@ -204,50 +240,21 @@ const AdminTransiciones = () => {
             </form>
           </div>
 
-          {/* Tabla de reglas */}
-          <div className="table-wrap" style={{ marginTop: '16px' }}>
+          <div style={{ marginTop: '16px' }}>
             <h4>Reglas Existentes</h4>
-            {loading ? (
-              <div className="loading">Cargando...</div>
-            ) : (
-              <table className="users-table">
-                <thead>
-                  <tr>
-                    <th>Etapa Origen</th>
-                    <th>→</th>
-                    <th>Etapa Destino</th>
-                    <th>Rol Permitido</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {reglas.length === 0 ? (
-                    <tr>
-                      <td colSpan={5}>
-                        <p className="empty-text">No hay reglas de transicion para este proceso. Agregue una arriba.</p>
-                      </td>
-                    </tr>
-                  ) : (
-                    reglas.map(r => (
-                      <tr key={r.id}>
-                        <td>{r.etapa_from_nombre || `Etapa #${r.etapa_from_id}`}</td>
-                        <td>→</td>
-                        <td>{r.etapa_to_nombre || `Etapa #${r.etapa_to_id}`}</td>
-                        <td><span className="role-tag">{getRolNombre(r.rol_id)}</span></td>
-                        <td>
-                          <button
-                            className="btn-mini btn-danger"
-                            onClick={() => handleEliminarRegla(r.id)}
-                          >
-                            Eliminar
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            )}
+            <DataTable
+              data={reglas}
+              columns={columns}
+              config={{
+                loading,
+                searchable: true,
+                searchPlaceholder: 'Buscar regla...',
+                sortable: true,
+                pagination: true,
+                pageSize: 10,
+                emptyMessage: 'No hay reglas de transicion para este proceso. Agregue una arriba.'
+              }}
+            />
           </div>
         </>
       )}

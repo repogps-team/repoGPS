@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApi } from '../../hooks/useApi'
+import DataTable from '../shared/DataTable'
 
 const FormList = () => {
   const navigate = useNavigate()
@@ -30,7 +31,7 @@ const FormList = () => {
     cargarFormularios()
   }, [cargarFormularios])
 
-  const handleToggleEstado = async (id, estadoActual) => {
+  const handleToggleEstado = useCallback(async (id, estadoActual) => {
     try {
       await patch(`/api/forms/${id}/estado`, { estado_activo: !estadoActual })
       setMensaje(`Formulario ${!estadoActual ? 'activado' : 'desactivado'}`)
@@ -38,11 +39,52 @@ const FormList = () => {
     } catch (err) {
       setError(err.message)
     }
-  }
+  }, [patch, cargarFormularios])
 
-  const handleVerRespuestas = (id) => {
-    navigate(`/formularios/${id}/respuestas`)
-  }
+  const columns = useMemo(() => [
+    {
+      accessorKey: 'nombre',
+      header: 'Nombre',
+      meta: { priority: 'high' }
+    },
+    {
+      accessorKey: 'descripcion',
+      header: 'Descripción',
+      cell: (info) => info.getValue() || '-',
+      meta: { priority: 'medium' }
+    },
+    {
+      accessorKey: 'estado_activo',
+      header: 'Estado',
+      cell: (info) => (
+        <span className={`role-tag ${info.getValue() ? '' : 'role-tag--inactive'}`}>
+          {info.getValue() ? 'Activo' : 'Inactivo'}
+        </span>
+      ),
+      meta: { priority: 'high' }
+    },
+    {
+      accessorKey: 'fecha_creacion',
+      header: 'Fecha Creación',
+      cell: (info) => new Date(info.getValue()).toLocaleDateString(),
+      meta: { priority: 'medium' }
+    },
+    {
+      id: 'acciones',
+      header: 'Acciones',
+      enableSorting: false,
+      cell: (info) => (
+        <div className="actions-cell">
+          <button className="btn-mini btn-edit" onClick={() => navigate(`/formularios/${info.row.original.id}/editar`)}>Editar</button>
+          <button className="btn-mini btn-danger" onClick={() => handleToggleEstado(info.row.original.id, info.row.original.estado_activo)}>
+            {info.row.original.estado_activo ? 'Desactivar' : 'Activar'}
+          </button>
+          <button className="btn-mini" onClick={() => navigate(`/formularios/${info.row.original.id}/respuestas`)}>Ver Respuestas</button>
+        </div>
+      ),
+      meta: { priority: 'high' }
+    }
+  ], [navigate, handleToggleEstado])
 
   return (
     <section className="panel">
@@ -61,67 +103,19 @@ const FormList = () => {
       {mensaje && <div className="alert alert-success">{mensaje}</div>}
       {error && <div className="alert alert-error">{error}</div>}
 
-      {loading ? (
-        <div className="loading">Cargando...</div>
-      ) : (
-        <div className="table-wrap">
-          <table className="users-table">
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Descripción</th>
-                <th>Estado</th>
-                <th>Fecha Creación</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {formularios.length === 0 ? (
-                <tr>
-                  <td colSpan={5}>
-                    <p className="empty-text">No hay formularios creados</p>
-                  </td>
-                </tr>
-              ) : (
-                formularios.map(f => (
-                  <tr key={f.id}>
-                    <td>{f.nombre}</td>
-                    <td>{f.descripcion || '-'}</td>
-                    <td>
-                      <span className={`role-tag ${f.estado_activo ? '' : 'role-tag--inactive'}`}>
-                        {f.estado_activo ? 'Activo' : 'Inactivo'}
-                      </span>
-                    </td>
-                    <td>{new Date(f.fecha_creacion).toLocaleDateString()}</td>
-                    <td>
-                      <button
-                        className="btn-mini btn-edit"
-                        onClick={() => navigate(`/formularios/${f.id}/editar`)}
-                      >
-                        Editar
-                      </button>
-                      <button
-                        className="btn-mini btn-danger"
-                        onClick={() => handleToggleEstado(f.id, f.estado_activo)}
-                        style={{ marginLeft: '4px' }}
-                      >
-                        {f.estado_activo ? 'Desactivar' : 'Activar'}
-                      </button>
-                      <button
-                        className="btn-mini"
-                        onClick={() => handleVerRespuestas(f.id)}
-                        style={{ marginLeft: '4px' }}
-                      >
-                        Ver Respuestas
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <DataTable
+        data={formularios}
+        columns={columns}
+        config={{
+          loading,
+          searchable: true,
+          searchPlaceholder: 'Buscar formulario...',
+          sortable: true,
+          pagination: true,
+          pageSize: 10,
+          emptyMessage: 'No hay formularios creados'
+        }}
+      />
     </section>
   )
 }

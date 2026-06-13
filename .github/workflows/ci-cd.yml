@@ -5,6 +5,7 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -42,6 +43,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: |
+            frontend/package-lock.json
+            backend/ms-usuarios/package-lock.json
+            backend/ms-mantenedor/package-lock.json
+            backend/ms-expedientes/package-lock.json
+            backend/ms-auditoria/package-lock.json
       
       # Frontend
       - name: Linter y Build Frontend
@@ -81,6 +89,16 @@ jobs:
         working-directory: ./backend/ms-mantenedor
         run: npm test
 
+      # Backend ms-auditoria
+      - name: Instalar Backend Auditoría
+        working-directory: ./backend/ms-auditoria
+        run: npm ci
+
+      # Tests ms-auditoria
+      - name: Tests Backend Auditoría
+        working-directory: ./backend/ms-auditoria
+        run: npm test
+
   # ==========================================
   # FASE 2: LA FÁBRICA (Construir Imágenes en GitHub)
   # ==========================================
@@ -94,6 +112,11 @@ jobs:
       packages: write 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Configurar Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
 
       - name: Iniciar sesión en GitHub Container Registry
         uses: docker/login-action@v3
@@ -110,8 +133,11 @@ jobs:
         with:
           context: ./frontend
           push: true
-          tags: ghcr.io/${{ env.REPO_LOWER }}/repogps-frontend:latest
-          no-cache: true
+          tags: |
+            ghcr.io/${{ env.REPO_LOWER }}/repogps-frontend:latest
+            ghcr.io/${{ env.REPO_LOWER }}/repogps-frontend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=min
 
       # ============================================
       # Build ms-usuarios
@@ -121,8 +147,11 @@ jobs:
         with:
           context: ./backend/ms-usuarios
           push: true
-          tags: ghcr.io/${{ env.REPO_LOWER }}/repogps-ms-usuarios:latest
-          no-cache: true
+          tags: |
+            ghcr.io/${{ env.REPO_LOWER }}/repogps-ms-usuarios:latest
+            ghcr.io/${{ env.REPO_LOWER }}/repogps-ms-usuarios:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=min
 
       # ============================================
       # Build ms-mantenedor (NUEVO)
@@ -132,8 +161,11 @@ jobs:
         with:
           context: ./backend/ms-mantenedor
           push: true
-          tags: ghcr.io/${{ env.REPO_LOWER }}/repogps-ms-mantenedor:latest
-          no-cache: true
+          tags: |
+            ghcr.io/${{ env.REPO_LOWER }}/repogps-ms-mantenedor:latest
+            ghcr.io/${{ env.REPO_LOWER }}/repogps-ms-mantenedor:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=min
 
       # ============================================
       # Build ms-expedientes
@@ -143,8 +175,25 @@ jobs:
         with:
           context: ./backend/ms-expedientes
           push: true
-          tags: ghcr.io/${{ env.REPO_LOWER }}/repogps-ms-expedientes:latest
-          no-cache: true
+          tags: |
+            ghcr.io/${{ env.REPO_LOWER }}/repogps-ms-expedientes:latest
+            ghcr.io/${{ env.REPO_LOWER }}/repogps-ms-expedientes:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=min
+
+      # ============================================
+      # Build ms-auditoria (NUEVO)
+      # ============================================
+      - name: Construir y Subir Backend Auditoría
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend/ms-auditoria
+          push: true
+          tags: |
+            ghcr.io/${{ env.REPO_LOWER }}/repogps-ms-auditoria:latest
+            ghcr.io/${{ env.REPO_LOWER }}/repogps-ms-auditoria:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=min
 
   # ==========================================
   # FASE 3: DESPLIEGUE CONTINUO (CD) - Servidor UBB
@@ -169,15 +218,24 @@ jobs:
           script: |
             cd ~/repoGPS
             git pull origin main
-            
+            export IMAGE_TAG=${{ github.sha }}
+             
             echo "$GITHUB_TOKEN" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            
+             
             docker-compose pull
-            
-            docker-compose down
-            
+
+            docker-compose down --remove-orphans
+
             docker system prune -f
-            
-            docker-compose up -d
-            
-            docker image prune -a -f
+
+            docker-compose up -d --force-recreate
+
+            for i in $(seq 1 30); do
+              curl -fsS http://localhost:8045/grafana/ >/dev/null && break || sleep 5
+            done
+            curl -fsS http://localhost:8045/grafana/ >/dev/null
+
+            for i in $(seq 1 30); do
+              curl -fsS http://localhost:8045/prometheus/targets >/dev/null && break || sleep 5
+            done
+            curl -fsS http://localhost:8045/prometheus/targets >/dev/null

@@ -1,0 +1,116 @@
+{
+  "uid": "dash-funnel-workflow",
+  "title": "Reportes / Funnel de Workflow",
+  "tags": ["reportes", "workflow", "funnel"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-30d", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "contratista",
+        "label": "Contratista",
+        "type": "query",
+        "datasource": "Expedientes DB",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": 0,
+        "multi": false,
+        "query": "SELECT id as __value, razon_social as __text FROM contratistas_mirror WHERE estado_activo = true ORDER BY razon_social",
+        "current": { "text": "All", "value": 0 }
+      },
+      {
+        "name": "area",
+        "label": "Área",
+        "type": "query",
+        "datasource": "Expedientes DB",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": 0,
+        "multi": false,
+        "query": "SELECT id as __value, nombre as __text FROM areas_mirror WHERE estado_activo = true AND (0 IN (${contratista:csv}) OR contratista_id IN (${contratista:csv})) ORDER BY nombre",
+        "current": { "text": "All", "value": 0 }
+      },
+      {
+        "name": "proceso",
+        "label": "Proceso",
+        "type": "query",
+        "datasource": "Expedientes DB",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": 0,
+        "multi": false,
+        "query": "SELECT id as __value, nombre as __text FROM procesos WHERE estado_activo = true AND (0 IN (${area:csv}) OR area_id IN (${area:csv})) ORDER BY nombre",
+        "current": { "text": "All", "value": 0 }
+      },
+      {
+        "name": "etapa",
+        "label": "Etapa",
+        "type": "query",
+        "datasource": "Expedientes DB",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": 0,
+        "multi": false,
+        "query": "SELECT id as __value, nombre as __text FROM etapas_proceso WHERE estado_activo = true ORDER BY proceso_id, orden",
+        "current": { "text": "All", "value": 0 }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "barchart",
+      "title": "Funnel de Expedientes por Etapa",
+      "datasource": "Expedientes DB",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT ep.nombre AS etapa, COUNT(DISTINCT e.id) AS total FROM historial_etapas h JOIN expedientes e ON h.expediente_id = e.id JOIN etapas_proceso ep ON h.etapa_id = ep.id LEFT JOIN procesos p ON e.proceso_id = p.id WHERE e.estado_activo = true AND (0 IN (${area:csv}) OR p.area_id IN (${area:csv})) AND (0 IN (${proceso:csv}) OR e.proceso_id IN (${proceso:csv})) AND (0 IN (${contratista:csv}) OR e.contratista_id IN (${contratista:csv})) AND (0 IN (${etapa:csv}) OR h.etapa_id IN (${etapa:csv})) GROUP BY ep.nombre ORDER BY MIN(h.orden)"
+        }
+      ]
+    },
+    {
+      "type": "barchart",
+      "title": "Expedientes Stuck por Etapa Actual",
+      "datasource": "Expedientes DB",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT ep.nombre AS etapa, COUNT(*) AS stuck, AVG(EXTRACT(EPOCH FROM (now() - e.fecha_creacion)) / 86400) AS promedio_dias FROM expedientes e JOIN etapas_proceso ep ON e.etapa_actual_id = ep.id LEFT JOIN procesos p ON e.proceso_id = p.id WHERE e.estado_activo = true AND (ep.tipo_etapa != 'final' OR ep.es_final = false) AND (0 IN (${area:csv}) OR p.area_id IN (${area:csv})) AND (0 IN (${proceso:csv}) OR e.proceso_id IN (${proceso:csv})) AND (0 IN (${contratista:csv}) OR e.contratista_id IN (${contratista:csv})) AND (0 IN (${etapa:csv}) OR e.etapa_actual_id IN (${etapa:csv})) GROUP BY ep.nombre ORDER BY stuck DESC"
+        }
+      ]
+    },
+    {
+      "type": "barchart",
+      "title": "Tasa de Rechazo por Etapa",
+      "datasource": "Expedientes DB",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT ep.nombre AS etapa, COUNT(*) FILTER (WHERE h.accion = 'rechazar') AS rechazados, COUNT(*) AS total, ROUND(COUNT(*) FILTER (WHERE h.accion = 'rechazar')::numeric / NULLIF(COUNT(*), 0) * 100, 1) AS tasa_rechazo_pct FROM historial_etapas h JOIN expedientes e ON h.expediente_id = e.id JOIN etapas_proceso ep ON h.etapa_id = ep.id LEFT JOIN procesos p ON e.proceso_id = p.id WHERE e.estado_activo = true AND (0 IN (${area:csv}) OR p.area_id IN (${area:csv})) AND (0 IN (${proceso:csv}) OR e.proceso_id IN (${proceso:csv})) AND (0 IN (${contratista:csv}) OR e.contratista_id IN (${contratista:csv})) AND (0 IN (${etapa:csv}) OR h.etapa_id IN (${etapa:csv})) GROUP BY ep.nombre ORDER BY tasa_rechazo_pct DESC"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Transiciones Más Ejecutadas",
+      "datasource": "Auditoria DB",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT accion, entidad, COUNT(*) AS total, COUNT(DISTINCT usuario_id) AS usuarios_distintos FROM audit_events WHERE accion IN ('ADVANCE', 'REJECT') GROUP BY accion, entidad ORDER BY total DESC"
+        }
+      ]
+    }
+  ]
+}

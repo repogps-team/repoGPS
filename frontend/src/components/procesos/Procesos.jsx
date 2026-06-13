@@ -137,7 +137,7 @@ const ProcesosPanel = () => {
           </div>
         </div>
         <div className="table-wrap">
-          <table className="users-table">
+          <table className="data-table">
             <thead>
               <tr>
                 <th>Proceso</th>

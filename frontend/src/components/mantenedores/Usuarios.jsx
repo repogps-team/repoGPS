@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useUsuarios } from '../../hooks/useUsuarios'
+import DataTable from '../shared/DataTable'
 
 const UsuariosPanel = () => {
   const {
@@ -21,13 +22,10 @@ const UsuariosPanel = () => {
   })
   const [editandoId, setEditandoId] = useState(null)
   const [tabActiva, setTabActiva] = useState('activos')
-  const [busqueda, setBusqueda] = useState('')
 
   useEffect(() => {
     Promise.all([cargarUsuarios(), cargarRoles()])
   }, [cargarUsuarios, cargarRoles])
-
-  const limpiarBusqueda = () => setBusqueda('')
 
   const limpiarFormulario = () => {
     setFormData({
@@ -55,7 +53,7 @@ const UsuariosPanel = () => {
     }
   }
 
-  const handleEditar = (u) => {
+  const handleEditar = useCallback((u) => {
     setFormData({
       rol_id: String(u.rol_id),
       area_id: String(u.area_id),
@@ -64,30 +62,53 @@ const UsuariosPanel = () => {
       password_hash: u.password_hash || '123456'
     })
     setEditandoId(u.id)
-  }
+  }, [])
 
-  const handleCambiarEstado = async (id, nuevoEstado) => {
+  const handleCambiarEstado = useCallback(async (id, nuevoEstado) => {
     try {
       await cambiarEstado(id, nuevoEstado)
       cargarUsuarios()
     } catch (err) {
       alert(err.message)
     }
-  }
+  }, [cambiarEstado, cargarUsuarios])
 
-  const filtrarData = (lista) => {
-    return lista
-      .filter(item => tabActiva === 'activos' ? item.estado_activo : !item.estado_activo)
-      .filter(item => {
-        const s = busqueda.toLowerCase()
-        return (
-          item.nombre_completo?.toLowerCase().includes(s) ||
-          item.correo?.toLowerCase().includes(s) ||
-          item.rol_nombre?.toLowerCase().includes(s) ||
-          item.area_nombre?.toLowerCase().includes(s)
-        )
-      })
-  }
+  const filteredData = useMemo(() => {
+    return usuarios.filter(u => tabActiva === 'activos' ? u.estado_activo : !u.estado_activo)
+  }, [usuarios, tabActiva])
+
+  const columns = useMemo(() => [
+    {
+      accessorKey: 'nombre_completo',
+      header: 'Nombre',
+      meta: { priority: 'high' }
+    },
+    {
+      accessorKey: 'correo',
+      header: 'Correo',
+      meta: { priority: 'medium' }
+    },
+    {
+      accessorKey: 'rol_nombre',
+      header: 'Rol',
+      cell: (info) => <span className="role-tag">{info.getValue()}</span>,
+      meta: { priority: 'high' }
+    },
+    {
+      id: 'acciones',
+      header: 'Acciones',
+      enableSorting: false,
+      cell: (info) => (
+        <div className="actions-cell">
+          <button className="btn-mini btn-edit" onClick={() => handleEditar(info.row.original)}>Editar</button>
+          <button className="btn-mini btn-danger" onClick={() => handleCambiarEstado(info.row.original.id, !info.row.original.estado_activo)}>
+            {info.row.original.estado_activo ? 'Borrar' : 'Reactivar'}
+          </button>
+        </div>
+      ),
+      meta: { priority: 'high' }
+    }
+  ], [handleEditar, handleCambiarEstado])
 
   const getTitulo = () => editandoId ? 'Modificar' : 'Registrar'
 
@@ -137,47 +158,22 @@ const UsuariosPanel = () => {
       <section className="panel">
         <div className="panel-top">
           <div className="tabs">
-            <button className={`tab-btn ${tabActiva === 'activos' ? 'active' : ''}`} onClick={() => { setTabActiva('activos'); limpiarBusqueda(); }}>Activos</button>
-            <button className={`tab-btn ${tabActiva === 'inactivos' ? 'active' : ''}`} onClick={() => { setTabActiva('inactivos'); limpiarBusqueda(); }}>Inactivos</button>
-          </div>
-          <div className="table-controls" style={{ marginLeft: 'auto' }}>
-            <div className="search-wrapper">
-              <span className="search-icon"></span>
-              <input 
-                type="text" 
-                className="search-input"
-                placeholder="Buscar..." 
-                value={busqueda} 
-                onChange={e => setBusqueda(e.target.value)} 
-              />
-            </div>
+            <button className={`tab-btn ${tabActiva === 'activos' ? 'active' : ''}`} onClick={() => setTabActiva('activos')}>Activos</button>
+            <button className={`tab-btn ${tabActiva === 'inactivos' ? 'active' : ''}`} onClick={() => setTabActiva('inactivos')}>Inactivos</button>
           </div>
         </div>
-        <div className="table-wrap">
-          <table className="users-table">
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Correo</th>
-                <th>Rol</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtrarData(usuarios).map(u => (
-                <tr key={u.id}>
-                  <td>{u.nombre_completo}</td>
-                  <td>{u.correo}</td>
-                  <td><span className="role-tag">{u.rol_nombre}</span></td>
-                  <td>
-                    <button className="btn-mini btn-edit" onClick={() => handleEditar(u)}>Editar</button>
-                    <button className="btn-mini btn-danger" onClick={() => handleCambiarEstado(u.id, !u.estado_activo)}>{u.estado_activo ? 'Borrar' : 'Reactivar'}</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          data={filteredData}
+          columns={columns}
+          config={{
+            searchable: true,
+            searchPlaceholder: 'Buscar por nombre, correo o rol...',
+            sortable: true,
+            pagination: true,
+            pageSize: 10,
+            emptyMessage: 'No hay usuarios en esta categoría'
+          }}
+        />
       </section>
     </>
   )
