@@ -119,6 +119,7 @@ const DataTable = ({
           table={table}
           onRowClick={onRowClick}
           rowClassName={rowClassName}
+          renderExpanded={renderExpanded}
         />
       ) : (
         <div className="table-wrap">
