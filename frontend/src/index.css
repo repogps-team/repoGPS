@@ -1094,13 +1094,13 @@ button { font-family: inherit; }
 .tabs {
   display: flex;
   gap: 2px;
-  transform: translateY(1px);
   overflow-x: auto;
   white-space: nowrap;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  scrollbar-width: thin;
 }
-.tabs::-webkit-scrollbar { display: none; }
+.tabs::-webkit-scrollbar { height: 6px; }
+.tabs::-webkit-scrollbar-track { background: var(--bg-app); }
+.tabs::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 3px; }
 
 .tab-btn {
   padding: 18px 25px;
