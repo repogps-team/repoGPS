@@ -528,7 +528,7 @@ body {
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-color);
   margin-bottom: 30px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .panel-top {
