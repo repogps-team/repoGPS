@@ -1094,8 +1094,13 @@ button { font-family: inherit; }
 .tabs {
   display: flex;
   gap: 2px;
-  transform: translateY(1px); 
+  transform: translateY(1px);
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
+.tabs::-webkit-scrollbar { display: none; }
 
 .tab-btn {
   padding: 18px 25px;
@@ -1107,6 +1112,8 @@ button { font-family: inherit; }
   color: var(--text-muted);
   cursor: pointer;
   transition: all 0.2s;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .tab-btn:hover { color: var(--text-main); }
