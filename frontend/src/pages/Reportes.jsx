@@ -26,13 +26,13 @@ const DASHBOARD_UIDS = {
 }
 
 const TABS = [
-  { id: 'general', label: 'Dashboard General' },
+  { id: 'general', label: 'General' },
   { id: 'productividad', label: 'Productividad' },
   { id: 'documentos', label: 'Documentos' },
   { id: 'trazabilidad', label: 'Trazabilidad' },
-  { id: 'bandeja-tareas', label: 'Bandeja de Tareas' },
-  { id: 'tiempos-sla', label: 'Tiempos / SLA' },
-  { id: 'funnel-workflow', label: 'Funnel Workflow' },
+  { id: 'bandeja-tareas', label: 'Tareas' },
+  { id: 'tiempos-sla', label: 'Tiempos de Resolución' },
+  { id: 'funnel-workflow', label: 'Flujo por Etapas' },
   { id: 'rechazos', label: 'Rechazos' },
   { id: 'formularios', label: 'Formularios' },
   { id: 'almacenamiento', label: 'Almacenamiento' },
