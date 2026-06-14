@@ -46,7 +46,7 @@
         {
           "refId": "A",
           "format": "table",
-          "rawSql": "SELECT r.nombre AS rol, COUNT(ta.id) AS total FROM tareas_asignadas ta JOIN usuarios_mirror um ON ta.usuario_id = um.id JOIN usuarios u ON um.id = u.id JOIN roles r ON u.rol_id = r.id WHERE (0 IN (${usuario:csv}) OR ta.usuario_id IN (${usuario:csv})) GROUP BY r.nombre ORDER BY total DESC"
+          "rawSql": "SELECT um.nombre_completo AS usuario, COUNT(ta.id) AS total FROM tareas_asignadas ta JOIN usuarios_mirror um ON ta.usuario_id = um.id WHERE (0 IN (${usuario:csv}) OR ta.usuario_id IN (${usuario:csv})) GROUP BY um.nombre_completo ORDER BY total DESC"
         }
       ]
     },

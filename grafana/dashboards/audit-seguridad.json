@@ -16,10 +16,9 @@
         "datasource": "Auditoria DB",
         "refresh": 2,
         "includeAll": true,
-        "allValue": "",
         "multi": false,
         "query": "SELECT DISTINCT usuario_nombre as __value, usuario_nombre as __text FROM audit_events WHERE usuario_nombre IS NOT NULL ORDER BY usuario_nombre",
-        "current": { "text": "All", "value": "" }
+        "current": { "text": "All", "value": "$__all" }
       }
     ]
   },
@@ -33,7 +32,7 @@
         {
           "refId": "A",
           "format": "time_series",
-          "rawSql": "SELECT date_trunc('day', fecha) AS time, COUNT(*) AS value FROM audit_events WHERE accion = 'LOGIN' AND (${usuario:sqlstring} = '' OR usuario_nombre IN (${usuario:sqlstring})) GROUP BY 1 ORDER BY 1"
+          "rawSql": "SELECT date_trunc('day', fecha) AS time, COUNT(*) AS value FROM audit_events WHERE accion = 'LOGIN' AND usuario_nombre IN (${usuario:sqlstring}) GROUP BY 1 ORDER BY 1"
         }
       ]
     },
@@ -46,7 +45,7 @@
         {
           "refId": "A",
           "format": "table",
-          "rawSql": "SELECT usuario_nombre, MAX(fecha) AS ultimo_acceso FROM audit_events WHERE (${usuario:sqlstring} = '' OR usuario_nombre IN (${usuario:sqlstring})) GROUP BY usuario_nombre HAVING MAX(fecha) < NOW() - INTERVAL '30 days'"
+          "rawSql": "SELECT usuario_nombre, MAX(fecha) AS ultimo_acceso FROM audit_events WHERE usuario_nombre IN (${usuario:sqlstring}) GROUP BY usuario_nombre HAVING MAX(fecha) < NOW() - INTERVAL '30 days'"
         }
       ]
     },
@@ -59,7 +58,7 @@
         {
           "refId": "A",
           "format": "table",
-          "rawSql": "SELECT fecha, usuario_nombre, accion, entidad, entidad_nombre FROM audit_events WHERE entidad IN ('area', 'contratista', 'proceso', 'rol') AND (${usuario:sqlstring} = '' OR usuario_nombre IN (${usuario:sqlstring})) ORDER BY fecha DESC LIMIT 100"
+          "rawSql": "SELECT fecha, usuario_nombre, accion, entidad, entidad_nombre FROM audit_events WHERE entidad IN ('area', 'contratista', 'proceso', 'rol') AND usuario_nombre IN (${usuario:sqlstring}) ORDER BY fecha DESC LIMIT 100"
         }
       ]
     },
@@ -72,7 +71,7 @@
         {
           "refId": "A",
           "format": "table",
-          "rawSql": "SELECT fecha, usuario_nombre, accion, entidad, entidad_nombre, valor_anterior, valor_nuevo FROM audit_events WHERE valor_anterior IS NOT NULL AND (${usuario:sqlstring} = '' OR usuario_nombre IN (${usuario:sqlstring})) ORDER BY fecha DESC LIMIT 100"
+          "rawSql": "SELECT fecha, usuario_nombre, accion, entidad, entidad_nombre, valor_anterior, valor_nuevo FROM audit_events WHERE valor_anterior IS NOT NULL AND usuario_nombre IN (${usuario:sqlstring}) ORDER BY fecha DESC LIMIT 100"
         }
       ]
     }
