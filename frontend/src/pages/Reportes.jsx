@@ -57,19 +57,6 @@ function getDefaultFechaHasta() {
   return new Date().toISOString().split('T')[0]
 }
 
-// URL inicial del iframe (default: general, últimos 30 días)
-function getInitialIframeSrc() {
-  const uid = DASHBOARD_UIDS.general
-  const params = new URLSearchParams({
-    orgId: '1',
-    kiosk: 'tv',
-    refresh: '30s',
-    var_fecha_desde: getDefaultFechaDesde(),
-    var_fecha_hasta: getDefaultFechaHasta(),
-  })
-  return `/grafana/d/${uid}?${params.toString()}`
-}
-
 export default function Reportes() {
   const { user } = useAuth()
   const [activeTab, setActiveTab] = useState('general')
