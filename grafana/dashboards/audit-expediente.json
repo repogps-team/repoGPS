@@ -39,7 +39,7 @@
         {
           "refId": "A",
           "format": "table",
-          "rawSql": "SELECT fecha, usuario_nombre, accion, entidad, valor_anterior, valor_nuevo FROM audit_events WHERE entidad = 'expediente' AND entidad_id = ${expediente_id} AND usuario_nombre IN (${usuario:sqlstring}) ORDER BY fecha DESC"
+          "rawSql": "SELECT fecha, usuario_nombre, accion, entidad, valor_anterior, valor_nuevo FROM audit_events WHERE entidad = 'expediente' AND ('${expediente_id}' = '' OR entidad_id = ${expediente_id}::int) AND usuario_nombre IN (${usuario:sqlstring}) ORDER BY fecha DESC"
         }
       ]
     },
