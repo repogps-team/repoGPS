@@ -45,7 +45,7 @@
         {
           "refId": "A",
           "format": "table",
-          "rawSql": "SELECT pg_size_pretty(SUM(tamano_bytes)) AS total_almacenamiento, COUNT(*) AS total_documentos FROM documentos WHERE estado_activo = true"
+          "rawSql": "SELECT pg_size_pretty(SUM(tamano_bytes)::bigint) AS total_almacenamiento, COUNT(*) AS total_documentos FROM documentos WHERE estado_activo = true"
         }
       ]
     },
@@ -71,7 +71,7 @@
         {
           "refId": "A",
           "format": "table",
-          "rawSql": "SELECT pg_size_pretty(AVG(tamano_bytes)) AS promedio FROM documentos WHERE estado_activo = true"
+          "rawSql": "SELECT pg_size_pretty(AVG(tamano_bytes)::bigint) AS promedio FROM documentos WHERE estado_activo = true"
         }
       ]
     },
@@ -97,7 +97,7 @@
         {
           "refId": "A",
           "format": "table",
-          "rawSql": "SELECT mime_type, COUNT(*) AS total FROM documentos WHERE estado_activo = true GROUP BY mime_type ORDER BY total DESC"
+          "rawSql": "SELECT tipo_mime, COUNT(*) AS total FROM documentos WHERE estado_activo = true GROUP BY tipo_mime ORDER BY total DESC"
         }
       ]
     },
@@ -110,7 +110,7 @@
         {
           "refId": "A",
           "format": "table",
-          "rawSql": "SELECT d.nombre_archivo, pg_size_pretty(d.tamano_bytes) AS tamano, d.mime_type, e.numero AS expediente, e.titulo FROM documentos d JOIN expedientes e ON d.expediente_id = e.id WHERE d.estado_activo = true ORDER BY d.tamano_bytes DESC LIMIT 10"
+          "rawSql": "SELECT d.nombre_archivo, pg_size_pretty(d.tamano_bytes::bigint) AS tamano, d.tipo_mime, e.titulo AS expediente FROM documentos d JOIN expedientes e ON d.expediente_id = e.id WHERE d.estado_activo = true ORDER BY d.tamano_bytes DESC LIMIT 10"
         }
       ]
     }

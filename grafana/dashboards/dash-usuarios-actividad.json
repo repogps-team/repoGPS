@@ -46,7 +46,7 @@
         {
           "refId": "A",
           "format": "table",
-          "rawSql": "SELECT CASE WHEN MAX(fecha) >= NOW() - INTERVAL '30 days' THEN 'Activo' ELSE 'Inactivo' END AS estado, COUNT(DISTINCT usuario_id) AS usuarios FROM audit_events WHERE accion = 'LOGIN' AND (0 IN (${usuario:csv}) OR usuario_id IN (${usuario:csv})) GROUP BY estado"
+          "rawSql": "SELECT estado, COUNT(*) AS usuarios FROM (SELECT DISTINCT usuario_id, CASE WHEN MAX(fecha) >= NOW() - INTERVAL '30 days' THEN 'Activo' ELSE 'Inactivo' END AS estado FROM audit_events WHERE accion = 'LOGIN' AND (0 IN (${usuario:csv}) OR usuario_id IN (${usuario:csv})) GROUP BY usuario_id) sub GROUP BY estado"
         }
       ]
     },
