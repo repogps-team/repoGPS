@@ -236,6 +236,8 @@ export default function Reportes() {
   const areasActivas = areas.filter(area => area.estado_activo !== false)
   const contratistasActivos = contratistas.filter(contratista => contratista.estado_activo !== false)
   const procesosActivos = procesos.filter(proceso => proceso.estado_activo !== false)
+  const usuariosActivos = usuarios.filter(u => u.estado_activo !== false)
+  const etapasActivas = etapas.filter(ep => ep.estado_activo !== false)
 
   const hasFilters = areaId || contratistaId || procesoId || usuarioId || etapaId
     || fechaDesde !== getDefaultFechaDesde() || fechaHasta !== getDefaultFechaHasta()
@@ -337,7 +339,7 @@ export default function Reportes() {
             <label>Usuario</label>
             <select value={usuarioId} onChange={e => setUsuarioId(e.target.value)}>
               <option value="">Todos</option>
-              {usuarios.map(u => (
+              {usuariosActivos.map(u => (
                 <option key={u.id} value={u.id}>{u.nombre_completo}</option>
               ))}
             </select>
@@ -347,7 +349,7 @@ export default function Reportes() {
             <label>Etapa</label>
             <select value={etapaId} onChange={e => setEtapaId(e.target.value)}>
               <option value="">Todas</option>
-              {etapas.map(ep => (
+              {etapasActivas.map(ep => (
                 <option key={ep.id} value={ep.id}>{ep.nombre}</option>
               ))}
             </select>
