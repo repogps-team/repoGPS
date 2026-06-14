@@ -1993,6 +1993,26 @@ button { font-family: inherit; }
   max-width: 350px;
 }
 
+.reportes-welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.reportes-welcome h4 {
+  color: var(--text-main);
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin: 0 0 8px;
+  max-width: 420px;
+}
+.reportes-welcome p {
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  margin: 0;
+  max-width: 380px;
+}
+
 /* Spinner */
 .reportes-spinner {
   width: 44px;

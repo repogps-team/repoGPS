@@ -74,8 +74,9 @@ export default function Reportes() {
   const { user } = useAuth()
   const [activeTab, setActiveTab] = useState('general')
   const [activeAuditTab, setActiveAuditTab] = useState('audit-actividad')
-  const [iframeSrc, setIframeSrc] = useState(getInitialIframeSrc)
-  const [isLoading, setIsLoading] = useState(true)
+  const [iframeSrc, setIframeSrc] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [hasApplied, setHasApplied] = useState(false)
 
   // Filtros — fecha con defaults, resto vacío (opcional)
   const [areaId, setAreaId] = useState('')
@@ -190,6 +191,7 @@ export default function Reportes() {
   // Aplicar filtros: cargar el iframe con los filtros seleccionados
   const applyFilters = useCallback(() => {
     setIsLoading(true)
+    setHasApplied(true)
     const src = buildIframeSrc(
       activeTab, activeAuditTab, areaId, contratistaId, procesoId, fechaDesde, fechaHasta, usuarioId, etapaId
     )
@@ -208,6 +210,7 @@ export default function Reportes() {
     setUsuarioId('')
     setEtapaId('')
     setIsLoading(true)
+    setHasApplied(true)
     const src = buildIframeSrc(activeTab, activeAuditTab, '', '', '', defaultDesde, defaultHasta, '', '')
     setIframeSrc(src)
   }, [activeTab, activeAuditTab, buildIframeSrc])
@@ -216,6 +219,7 @@ export default function Reportes() {
   const handleTabChange = useCallback((tabId) => {
     setActiveTab(tabId)
     setIsLoading(true)
+    setHasApplied(true)
     const auditTab = tabId === 'auditoria' ? activeAuditTab : null
     setIframeSrc(buildIframeSrc(
       tabId, auditTab, areaId, contratistaId, procesoId, fechaDesde, fechaHasta, usuarioId, etapaId
@@ -227,6 +231,7 @@ export default function Reportes() {
     setActiveAuditTab(auditTabId)
     if (activeTab === 'auditoria') {
       setIsLoading(true)
+      setHasApplied(true)
       setIframeSrc(buildIframeSrc(
         'auditoria', auditTabId, areaId, contratistaId, procesoId, fechaDesde, fechaHasta, usuarioId, etapaId
       ))
@@ -370,20 +375,35 @@ export default function Reportes() {
 
       {/* Contenedor del iframe + overlay */}
       <div className="reportes-iframe-container">
-        <iframe
-          ref={iframeRef}
-          src={iframeSrc}
-          onLoad={handleIframeLoad}
-          title={`Dashboard ${activeTab}`}
-          className="reportes-iframe"
-          allowFullScreen
-        />
+        {hasApplied && (
+          <iframe
+            ref={iframeRef}
+            src={iframeSrc}
+            onLoad={handleIframeLoad}
+            title={`Dashboard ${activeTab}`}
+            className="reportes-iframe"
+            allowFullScreen
+          />
+        )}
+
+        {/* Overlay de bienvenida */}
+        {!hasApplied && (
+          <div className="reportes-overlay">
+            <div className="reportes-welcome">
+              <span className="material-icons" style={{ fontSize: 48, color: 'var(--primary-color)', marginBottom: 12 }}>analytics</span>
+              <h4>Selecciona los filtros y haz clic en <strong>Aplicar filtros</strong></h4>
+              <p>Usa los filtros superiores para acotar la información y luego carga el dashboard.</p>
+            </div>
+          </div>
+        )}
 
         {/* Overlay de carga */}
-        <div className={`reportes-overlay${isLoading ? '' : ' hidden'}`}>
-          <div className="reportes-spinner" />
-          <p>Cargando dashboard...</p>
-        </div>
+        {hasApplied && isLoading && (
+          <div className="reportes-overlay">
+            <div className="reportes-spinner" />
+            <p>Cargando dashboard...</p>
+          </div>
+        )}
       </div>
     </div>
   )
