@@ -95,7 +95,7 @@
         {
           "refId": "A",
           "format": "table",
-          "rawSql": "SELECT e.numero, e.titulo, p.nombre AS proceso, am.nombre AS area, EXTRACT(EPOCH FROM (now() - e.fecha_creacion)) / 86400 AS dias_transcurridos, CASE WHEN ep.tipo_etapa = 'final' OR ep.es_final THEN 'Terminado' ELSE 'En Proceso' END AS estado FROM expedientes e JOIN procesos p ON e.proceso_id = p.id LEFT JOIN areas_mirror am ON p.area_id = am.id LEFT JOIN etapas_proceso ep ON e.etapa_actual_id = ep.id WHERE e.estado_activo = true AND (0 IN (${area:csv}) OR p.area_id IN (${area:csv})) AND (0 IN (${proceso:csv}) OR e.proceso_id IN (${proceso:csv})) AND (0 IN (${contratista:csv}) OR e.contratista_id IN (${contratista:csv})) AND (0 IN (${etapa:csv}) OR e.etapa_actual_id IN (${etapa:csv})) AND EXTRACT(EPOCH FROM (now() - e.fecha_creacion)) / 86400 > 7 ORDER BY dias_transcurridos DESC"
+          "rawSql": "SELECT e.id, e.titulo, p.nombre AS proceso, am.nombre AS area, EXTRACT(EPOCH FROM (now() - e.fecha_creacion)) / 86400 AS dias_transcurridos, CASE WHEN ep.tipo_etapa = 'final' OR ep.es_final THEN 'Terminado' ELSE 'En Proceso' END AS estado FROM expedientes e JOIN procesos p ON e.proceso_id = p.id LEFT JOIN areas_mirror am ON p.area_id = am.id LEFT JOIN etapas_proceso ep ON e.etapa_actual_id = ep.id WHERE e.estado_activo = true AND (0 IN (${area:csv}) OR p.area_id IN (${area:csv})) AND (0 IN (${proceso:csv}) OR e.proceso_id IN (${proceso:csv})) AND (0 IN (${contratista:csv}) OR e.contratista_id IN (${contratista:csv})) AND (0 IN (${etapa:csv}) OR e.etapa_actual_id IN (${etapa:csv})) AND EXTRACT(EPOCH FROM (now() - e.fecha_creacion)) / 86400 > 7 ORDER BY dias_transcurridos DESC"
         }
       ]
     },

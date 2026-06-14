@@ -33,7 +33,7 @@
         {
           "refId": "A",
           "format": "time_series",
-          "rawSql": "SELECT date_trunc('day', fecha) AS time, COUNT(*) AS value FROM audit_events WHERE (0 IN (${usuario:csv}) OR usuario_id IN (${usuario:csv})) GROUP BY 1 ORDER BY 1"
+          "rawSql": "SELECT date_trunc('day', fecha) AS time, COUNT(*) AS value FROM audit_events WHERE (${usuario:sqlstring} = '' OR usuario_nombre IN (${usuario:sqlstring})) GROUP BY 1 ORDER BY 1"
         }
       ]
     },
@@ -46,7 +46,7 @@
         {
           "refId": "A",
           "format": "table",
-          "rawSql": "SELECT accion, COUNT(*) AS value FROM audit_events WHERE (0 IN (${usuario:csv}) OR usuario_id IN (${usuario:csv})) GROUP BY accion"
+          "rawSql": "SELECT accion, COUNT(*) AS value FROM audit_events WHERE (${usuario:sqlstring} = '' OR usuario_nombre IN (${usuario:sqlstring})) GROUP BY accion"
         }
       ]
     },
@@ -59,7 +59,7 @@
         {
           "refId": "A",
           "format": "table",
-          "rawSql": "SELECT usuario_nombre, COUNT(*) AS value FROM audit_events WHERE (0 IN (${usuario:csv}) OR usuario_id IN (${usuario:csv})) GROUP BY usuario_nombre ORDER BY COUNT(*) DESC LIMIT 10"
+          "rawSql": "SELECT usuario_nombre, COUNT(*) AS value FROM audit_events WHERE (${usuario:sqlstring} = '' OR usuario_nombre IN (${usuario:sqlstring})) GROUP BY usuario_nombre ORDER BY COUNT(*) DESC LIMIT 10"
         }
       ]
     },
@@ -72,7 +72,7 @@
         {
           "refId": "A",
           "format": "time_series",
-          "rawSql": "SELECT EXTRACT(HOUR FROM fecha) AS time, COUNT(*) AS value FROM audit_events WHERE (0 IN (${usuario:csv}) OR usuario_id IN (${usuario:csv})) GROUP BY 1 ORDER BY 1"
+          "rawSql": "SELECT EXTRACT(HOUR FROM fecha) AS time, COUNT(*) AS value FROM audit_events WHERE (${usuario:sqlstring} = '' OR usuario_nombre IN (${usuario:sqlstring})) GROUP BY 1 ORDER BY 1"
         }
       ]
     }
