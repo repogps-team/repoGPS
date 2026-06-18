@@ -46,6 +46,29 @@ services:
       - app-network
 
   # ============================================
+  # Microservicio Usuarios (Directo sin build - usa código local)
+  # ============================================
+  ms-usuarios:
+    image: node:18-alpine
+    container_name: ms-usuarios
+    working_dir: /app
+    command: sh -c "npm install && node index.js"
+    environment:
+      - NODE_OPTIONS=--max-old-space-size=256
+      - DB_USER=postgres
+      - DB_HOST=db
+      - DB_NAME=db_usuarios
+      - DB_PASSWORD=password123
+      - DB_PORT=5432
+      - MS_MANTENEDOR_URL=http://ms-mantenedor:3001
+      - MS_NOTIFICACIONES_URL=http://ms-notificaciones:3003
+      - JWT_SECRET=repoGPS_jwt_secret_key_2026
+    volumes:
+      - ./backend/ms-usuarios:/app
+    networks:
+      - app-network
+
+  # ============================================
   # Microservicio Notificaciones (Directo sin build - usa código local)
   # ============================================
   ms-notificaciones:
