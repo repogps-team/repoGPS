@@ -46,6 +46,70 @@ services:
       - app-network
 
   # ============================================
+  # Microservicio Usuarios (Directo sin build - usa código local)
+  # ============================================
+  ms-usuarios:
+    image: node:18-alpine
+    container_name: ms-usuarios
+    working_dir: /app
+    command: sh -c "npm install && node index.js"
+    environment:
+      - NODE_OPTIONS=--max-old-space-size=256
+      - DB_USER=postgres
+      - DB_HOST=db
+      - DB_NAME=db_usuarios
+      - DB_PASSWORD=password123
+      - DB_PORT=5432
+      - MS_MANTENEDOR_URL=http://ms-mantenedor:3001
+      - MS_NOTIFICACIONES_URL=http://ms-notificaciones:3003
+      - JWT_SECRET=repoGPS_jwt_secret_key_2026
+    volumes:
+      - ./backend/ms-usuarios:/app
+    networks:
+      - app-network
+
+  # ============================================
+  # MailHog (SMTP falso para desarrollo - captura emails en UI http://localhost:8025)
+  # ============================================
+  mailhog:
+    image: mailhog/mailhog
+    container_name: mailhog
+    ports:
+      - "8025:8025"   # UI web
+      - "1025:1025"   # SMTP
+    networks:
+      - app-network
+
+  # ============================================
+  # Microservicio Notificaciones (Directo sin build - usa código local)
+  # ============================================
+  ms-notificaciones:
+    image: node:18-alpine
+    container_name: ms-notificaciones
+    working_dir: /app
+    command: sh -c "npm install && node index.js"
+    environment:
+      - PORT=3003
+      - DB_USER=postgres
+      - DB_HOST=db_notificaciones
+      - DB_NAME=db_notificaciones
+      - DB_PASSWORD=password123
+      - DB_PORT=5432
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - SMTP_HOST=mailhog
+      - SMTP_PORT=1025
+      - SMTP_USER=
+      - SMTP_FROM=noreply@repogps.local
+      - FRONTEND_URL=http://localhost:8045
+    volumes:
+      - ./backend/ms-notificaciones:/app
+    depends_on:
+      - mailhog
+    networks:
+      - app-network
+
+  # ============================================
   # Frontend (Build local desde repositorio)
   # ============================================
   frontend:
@@ -78,6 +142,7 @@ services:
       - ms-usuarios
       - ms-mantenedor
       - ms-expedientes
+      - ms-notificaciones
     networks:
       - app-network
 

@@ -15,6 +15,7 @@ import EtapasPanel from './components/procesos/Etapas'
 import ExpedientesPanel from './components/expedientes/Expedientes'
 import BandejaTareas from './components/bandeja/BandejaTareas'
 import Login from './Login.jsx'
+import ActivarCuenta from './ActivarCuenta.jsx'
 import FormList from './components/forms/FormList'
 import FormBuilderPage from './components/forms/FormBuilder'
 import FormAssignment from './components/forms/FormAssignment'
@@ -163,6 +164,7 @@ const App = () => {
     <ThemeProvider>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/activar" element={<ActivarCuenta />} />
         <Route path="/*" element={<ProtectedRoute />} />
       </Routes>
     </ThemeProvider>

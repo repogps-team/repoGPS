@@ -1,0 +1,32 @@
+# openspec/config.yaml
+schema: spec-driven
+
+context: |
+  Tech stack: Node.js (Express 4/5) + PostgreSQL + Nginx + Docker
+  Architecture: Microservicios con API Composition, PostgreSQL por servicio
+  Testing: No se detectó test runner en el proyecto
+  Style: JavaScript CommonJS, sin linter/configuración de formato detectada
+
+strict_tdd: false
+
+rules:
+  proposal:
+    - Incluir plan de rollback para cambios riesgosos
+    - Identificar módulos/microservicios afectados
+  specs:
+    - Usar formato Given/When/Then para escenarios
+    - Usar palabras clave RFC 2119 (DEBE, DEBERÍA, PUEDE)
+  design:
+    - Incluir diagramas de secuencia para flujos complejos
+    - Documentar decisiones de arquitectura con fundamento
+  tasks:
+    - Agrupar tareas por fase (infraestructura, implementación)
+    - Usar numeración jerárquica (1.1, 1.2, etc.)
+    - Mantener tareas pequeñas para completar en una sesión
+  apply:
+    - Seguir patrones de código existentes
+    - Cargar skills relevantes para el stack del proyecto
+  verify:
+    - Verificar que la implementación cumple cada escenario de spec
+  archive:
+    - Advertir antes de mergear deltas destructivos (eliminaciones grandes)

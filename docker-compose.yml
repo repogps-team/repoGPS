@@ -63,6 +63,7 @@ services:
       - DB_PASSWORD=password123
       - DB_PORT=5432
       - MS_MANTENEDOR_URL=http://ms-mantenedor:3001
+      - MS_NOTIFICACIONES_URL=http://ms-notificaciones:3003
     depends_on:
       - db
       - db_mantenedor
@@ -103,6 +104,59 @@ services:
       - ./garage/garage.toml:/etc/garage.toml:ro
       - garage-data:/var/lib/garage
     command: ["/garage", "server", "--single-node", "--default-bucket"]
+    networks:
+      - app-network
+
+  # ============================================
+  # Redis (cola de mensajeria para ms-notificaciones)
+  # ============================================
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    networks:
+      - app-network
+
+  # ============================================
+  # Base de datos de Notificaciones (NUEVA)
+  # ============================================
+  db_notificaciones:
+    image: postgres:15
+    container_name: db_notificaciones
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password123
+      POSTGRES_DB: db_notificaciones
+    volumes:
+      - ./database/init_notificaciones.sql:/docker-entrypoint-initdb.d/init_notificaciones.sql
+      - pgdata_notificaciones:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  # ============================================
+  # Microservicio Notificaciones (NUEVO)
+  # ============================================
+  ms-notificaciones:
+    image: ghcr.io/repogps-team/repogps/repogps-ms-notificaciones:latest
+    container_name: ms-notificaciones
+    expose:
+      - "3003"
+    environment:
+      - PORT=3003
+      - DB_USER=postgres
+      - DB_HOST=db_notificaciones
+      - DB_NAME=db_notificaciones
+      - DB_PASSWORD=password123
+      - DB_PORT=5432
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - SMTP_HOST=smtp.pacheco.cl
+      - SMTP_PORT=587
+      - SMTP_USER=noreply@pacheco.cl
+      - SMTP_FROM=noreply@pacheco.cl
+      - FRONTEND_URL=https://pacheco.cl
+    depends_on:
+      - db_notificaciones
+      - redis
     networks:
       - app-network
 
@@ -158,6 +212,7 @@ services:
       - ms-usuarios
       - ms-mantenedor
       - ms-expedientes
+      - ms-notificaciones
     networks:
       - app-network
 
@@ -245,6 +300,7 @@ volumes:
   pgdata_usuarios:
   pgdata_mantenedor:
   pgdata_expedientes:
+  pgdata_notificaciones:
   prometheus-data:
   grafana-data:
   garage-data:
