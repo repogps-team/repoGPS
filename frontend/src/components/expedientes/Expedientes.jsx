@@ -1,12 +1,14 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useExpedientes } from '../../hooks/useExpedientes'
 import { useProcesos } from '../../hooks/useProcesos'
 import { useDisciplinas } from '../../hooks/useDisciplinas'
+import { useCategorias } from '../../hooks/useCategorias'
 import { useApi } from '../../hooks/useApi'
 import { useContratistas } from '../../hooks/useContratistas'
 import ExpedienteDetalle from './ExpedienteDetalle'
+import DataTable from '../shared/DataTable'
 
-const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicial = 'todos' }) => {
+const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicial = 'todos', abrirExpedienteId = null }) => {
   const { get } = useApi()
   const {
     expedientes,
@@ -19,10 +21,13 @@ const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicia
     cerrarDetalle,
     avanzarExpediente,
     devolverExpediente,
-    actualizarFechaTermino
+    rechazarExpediente,
+    actualizarFechaTermino,
+    refreshDocumentos
   } = useExpedientes()
   const { procesos, cargarProcesos } = useProcesos()
   const { cargarDisciplinas } = useDisciplinas()
+  const { categorias, subtipos, cargarCategorias, cargarSubtipos } = useCategorias()
   const { contratistas, cargarContratistas } = useContratistas()
 
   const [mostrarForm, setMostrarForm] = useState(false)
@@ -31,28 +36,46 @@ const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicia
     area_id: '',
     proceso_id: '',
     disciplina_id: '',
+    categoria_id: '',
+    subtipo_id: '',
     titulo: '',
     descripcion: '',
     fecha_termino: ''
   })
   const [etapasProceso, setEtapasProceso] = useState([])
+  const handleDocumentoUploaded = useCallback(() => {
+    if (expedienteDetalle?.id) {
+      refreshDocumentos(expedienteDetalle.id)
+    }
+  }, [expedienteDetalle, refreshDocumentos])
+
   const [filtroEstado, setFiltroEstado] = useState(filtroEstadoInicial)
   const [filtroSla, setFiltroSla] = useState(filtroSlaInicial)
   const [filtroProceso, setFiltroProceso] = useState('')
-  const [busqueda, setBusqueda] = useState('')
 
   // Listas filtradas para selects en cascada
   const [areasFiltradas, setAreasFiltradas] = useState([])
   const [disciplinasFiltradas, setDisciplinasFiltradas] = useState([])
   const [procesosFiltrados, setProcesosFiltrados] = useState([])
+  const [now] = useState(() => Date.now())
 
   // Es admin?
   const esAdmin = user?.rol_id === 1
 
   // Cargar opciones iniciales
   useEffect(() => {
-    Promise.all([cargarExpedientes(), cargarProcesos(), cargarDisciplinas(), cargarContratistas()])
-  }, [cargarExpedientes, cargarProcesos, cargarDisciplinas, cargarContratistas])
+    Promise.all([cargarExpedientes(), cargarProcesos(), cargarDisciplinas(), cargarCategorias(), cargarContratistas()])
+  }, [cargarExpedientes, cargarProcesos, cargarDisciplinas, cargarCategorias, cargarContratistas])
+
+  // Abrir expediente desde query param (HU-10: desde bandeja)
+  useEffect(() => {
+    if (abrirExpedienteId && expedientes.length > 0) {
+      const exp = expedientes.find(e => e.id === abrirExpedienteId)
+      if (exp) {
+        abrirDetalle(exp)
+      }
+    }
+  }, [abrirExpedienteId, expedientes, abrirDetalle])
 
 
   // Cargar áreas cuando se selecciona un contratista
@@ -142,7 +165,7 @@ const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicia
 
   const handleAreaChange = async (e) => {
     const areaId = e.target.value
-    setFormData(prev => ({ ...prev, area_id: areaId, disciplina_id: '', proceso_id: '' }))
+    setFormData(prev => ({ ...prev, area_id: areaId, disciplina_id: '', categoria_id: '', subtipo_id: '', proceso_id: '' }))
     setDisciplinasFiltradas([])
     setProcesosFiltrados([])
     setEtapasProceso([])
@@ -154,6 +177,14 @@ const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicia
 
   const handleDisciplinaChange = (e) => {
     setFormData(prev => ({ ...prev, disciplina_id: e.target.value }))
+  }
+
+  const handleCategoriaChange = (e) => {
+    const catId = e.target.value
+    setFormData(prev => ({ ...prev, categoria_id: catId, subtipo_id: '' }))
+    if (catId) {
+      cargarSubtipos(catId)
+    }
   }
 
   const handleSubmit = async (e) => {
@@ -168,7 +199,7 @@ const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicia
     try {
       await crearExpediente(formData)
       setMostrarForm(false)
-      setFormData({ contratista_id: '', area_id: '', proceso_id: '', disciplina_id: '', titulo: '', descripcion: '', fecha_termino: '' })
+      setFormData({ contratista_id: '', area_id: '', proceso_id: '', disciplina_id: '', categoria_id: '', subtipo_id: '', titulo: '', descripcion: '', fecha_termino: '' })
       setAreasFiltradas([])
       setDisciplinasFiltradas([])
       setProcesosFiltrados([])
@@ -179,7 +210,7 @@ const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicia
     }
   }
 
-  const filtrarData = () => {
+  const filtrarData = useMemo(() => {
     // Filtrar por área si no es admin
     let filtered = esAdmin
       ? expedientes
@@ -188,13 +219,12 @@ const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicia
     return filtered
       .filter(e => {
         if (!filtroEstado || filtroEstado === 'todos') return true
-        // filtroEstado holds backend estado values: 'Pendiente','En Desarrollo','Terminado'
         return e.estado === filtroEstado
       })
       .filter(e => {
         if (!filtroSla || filtroSla === 'todos') return true
         if (e.estado !== 'En Desarrollo') return false
-        const ahora = Date.now()
+        const ahora = now
         if (e.fecha_termino) {
           const fechaTermino = new Date(e.fecha_termino).getTime()
           if (filtroSla === 'atrasado') return ahora > fechaTermino
@@ -208,11 +238,74 @@ const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicia
         return true
       })
       .filter(e => !filtroProceso || e.proceso_id === Number(filtroProceso))
-      .filter(e => {
-        const s = busqueda.toLowerCase()
-        return e.titulo?.toLowerCase().includes(s) || e.proceso_nombre?.toLowerCase().includes(s)
-      })
-  }
+  }, [expedientes, esAdmin, user, filtroEstado, filtroSla, filtroProceso, now])
+
+  const columns = useMemo(() => [
+    {
+      accessorKey: 'titulo',
+      header: 'Título',
+      meta: { priority: 'high' }
+    },
+    {
+      accessorKey: 'proceso_nombre',
+      header: 'Proceso',
+      cell: (info) => info.getValue() || '-',
+      meta: { priority: 'medium' }
+    },
+    {
+      accessorKey: 'estado',
+      header: 'Etapa Actual',
+      cell: (info) => <span className="role-tag">{info.getValue()}</span>,
+      meta: { priority: 'high' }
+    },
+    {
+      accessorKey: 'fecha_creacion',
+      header: 'Fecha Creación',
+      cell: (info) => new Date(info.getValue()).toLocaleDateString(),
+      meta: { priority: 'medium' }
+    },
+    {
+      id: 'plazo',
+      header: 'Plazo',
+      cell: (info) => {
+        const exp = info.row.original
+        if (exp.estado !== 'En Desarrollo') {
+          return <span className="sla-tag sla-neutral">-</span>
+        }
+        const ahora = now
+        if (exp.fecha_termino) {
+          const fechaTermino = new Date(exp.fecha_termino).getTime()
+          const diffMs = fechaTermino - ahora
+          const diffDias = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
+          const enPlazo = diffMs >= 0
+          return (
+            <span className={`sla-tag ${enPlazo ? 'sla-ok' : 'sla-warn'}`}>
+              {enPlazo ? `En plazo (${diffDias}d)` : `Atrasado (${Math.abs(diffDias)}d)`}
+            </span>
+          )
+        }
+        const fechaExp = exp.fecha_actualizacion || exp.fecha_creacion
+        const diasTranscurridos = Math.floor((ahora - new Date(fechaExp)) / (1000 * 60 * 60 * 24))
+        const restantes = Math.max(10 - diasTranscurridos, 0)
+        const enPlazo = diasTranscurridos <= 10
+        return (
+          <span className={`sla-tag ${enPlazo ? 'sla-ok' : 'sla-warn'}`}>
+            {enPlazo ? `En plazo (${restantes}d)` : `Atrasado (${diasTranscurridos - 10}d)`}
+          </span>
+        )
+      },
+      meta: { priority: 'high' }
+    },
+    {
+      id: 'acciones',
+      header: 'Acciones',
+      enableSorting: false,
+      cell: (info) => (
+        <button className="btn-mini btn-edit" onClick={() => abrirDetalle(info.row.original)}>Ver Detalle</button>
+      ),
+      meta: { priority: 'high' }
+    }
+  ], [abrirDetalle, now])
 
   return (
     <>
@@ -268,6 +361,34 @@ const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicia
                 </div>
 
                 <div className="field">
+                  <label>Categoría</label>
+                  <select
+                    value={formData.categoria_id}
+                    onChange={handleCategoriaChange}
+                    disabled={!formData.area_id}
+                  >
+                    <option value="">Seleccione...</option>
+                    {categorias.filter(c => c.estado_activo !== false).map(c => (
+                      <option key={c.id} value={c.id}>{c.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="field">
+                  <label>Subtipo</label>
+                  <select
+                    value={formData.subtipo_id}
+                    onChange={e => setFormData(prev => ({ ...prev, subtipo_id: e.target.value }))}
+                    disabled={!formData.categoria_id}
+                  >
+                    <option value="">Seleccione...</option>
+                    {subtipos.filter(s => s.estado_activo !== false).map(s => (
+                      <option key={s.id} value={s.id}>{s.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="field">
                   <label>Proceso</label>
                   <select value={formData.proceso_id} onChange={async e => {
                     const procesoId = e.target.value
@@ -282,7 +403,7 @@ const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicia
                     {procesosFiltrados.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
                   </select>
                   {formData.proceso_id && etapasProceso.length === 0 && (
-                    <p style={{ color: '#e74c3c', fontSize: '12px', marginTop: '4px' }}>
+                    <p style={{ color: 'var(--danger-color)', fontSize: '12px', marginTop: '4px' }}>
                       Este proceso no tiene etapas activas. El expediente no podrá avanzar.
                     </p>
                   )}
@@ -341,75 +462,19 @@ const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicia
               {procesos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
             </select>
           </div>
-          <div className="table-controls">
-            <div className="search-wrapper">
-              <span className="search-icon"></span>
-              <input 
-                type="text" 
-                className="search-input"
-                placeholder="Buscar..." 
-                value={busqueda} 
-                onChange={e => setBusqueda(e.target.value)} 
-              />
-            </div>
-          </div>
         </div>
-        <div className="table-wrap">
-          <table className="users-table">
-            <thead>
-              <tr>
-                <th>Título</th>
-                <th>Proceso</th>
-                <th>Etapa Actual</th>
-                <th>Fecha Creación</th>
-                <th>Plazo</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtrarData().map(exp => (
-                <tr key={exp.id}>
-                  <td>{exp.titulo}</td>
-                  <td>{exp.proceso_nombre || '-'}</td>
-                  <td><span className="role-tag">{exp.estado}</span></td>
-                  <td>{new Date(exp.fecha_creacion).toLocaleDateString()}</td>
-                  <td>
-                    {exp.estado === 'En Desarrollo' ? (
-                      (() => {
-                        const ahora = Date.now()
-                        if (exp.fecha_termino) {
-                          const fechaTermino = new Date(exp.fecha_termino).getTime()
-                          const diffMs = fechaTermino - ahora
-                          const diffDias = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
-                          const enPlazo = diffMs >= 0
-                          return (
-                            <span className={`sla-tag ${enPlazo ? 'sla-ok' : 'sla-warn'}`}>
-                              {enPlazo ? `En plazo (${diffDias}d)` : `Atrasado (${Math.abs(diffDias)}d)`}
-                            </span>
-                          )
-                        }
-                        const fechaExp = exp.fecha_actualizacion || exp.fecha_creacion
-                        const diasTranscurridos = Math.floor((ahora - new Date(fechaExp)) / (1000 * 60 * 60 * 24))
-                        const restantes = Math.max(10 - diasTranscurridos, 0)
-                        const enPlazo = diasTranscurridos <= 10
-                        return (
-                          <span className={`sla-tag ${enPlazo ? 'sla-ok' : 'sla-warn'}`}>
-                            {enPlazo ? `En plazo (${restantes}d)` : `Atrasado (${diasTranscurridos - 10}d)`}
-                          </span>
-                        )
-                      })()
-                    ) : (
-                      <span className="sla-tag sla-neutral">-</span>
-                    )}
-                  </td>
-                  <td>
-                    <button className="btn-mini btn-edit" onClick={() => abrirDetalle(exp)}>Ver Detalle</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          data={filtrarData}
+          columns={columns}
+          config={{
+            searchable: true,
+            searchPlaceholder: 'Buscar por título o proceso...',
+            sortable: true,
+            pagination: true,
+            pageSize: 25,
+            emptyMessage: 'No hay expedientes con estos filtros'
+          }}
+        />
       </section>
 
       {expedienteDetalle && (
@@ -420,6 +485,8 @@ const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicia
           onCerrar={cerrarDetalle}
           onAvanzar={avanzarExpediente}
           onDevolver={devolverExpediente}
+          onRechazar={rechazarExpediente}
+          onDocumentoUploaded={handleDocumentoUploaded}
           onActualizarFechaTermino={async (id, fecha_termino) => {
             const updated = await actualizarFechaTermino(id, fecha_termino)
             if (updated) {

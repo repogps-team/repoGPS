@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useAuth } from "./context/useAuth";
 import { useTheme } from "./context/useTheme";
 import "./login.css";
 
 function Login() {
-  const { login } = useAuth()
+  const { login, offlineLogin } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const [correo, setCorreo] = useState("");
   const [password, setPassword] = useState("");
@@ -12,8 +12,30 @@ function Login() {
   const [mensajeInfo, setMensajeInfo] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const hayOffline = useMemo(() => {
+    return !navigator.onLine && localStorage.getItem('lastOfflineUser')
+  }, [])
+
   const API_URL = import.meta.env.VITE_API_URL || "";
+  const PWA_URL = import.meta.env.VITE_PWA_URL || "https://repo-gps.vercel.app";
   const isDark = theme === 'dark'
+
+  // Detect deployment context
+  const esPacheco = !window.location.hostname.includes('vercel.app')
+  const esVercel = !esPacheco
+  const isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+  const [redirecting, setRedirecting] = useState(false)
+
+  // On pacheco + mobile → auto-redirect to PWA on Vercel
+  useEffect(() => {
+    if (esPacheco && isMobile) {
+      setRedirecting(true)
+      const timer = setTimeout(() => {
+        window.location.href = PWA_URL
+      }, 2500)
+      return () => clearTimeout(timer)
+    }
+  }, [esPacheco, isMobile, PWA_URL])
 
   const ThemeToggle = () => (
     <button
@@ -72,9 +94,18 @@ function Login() {
         return;
       }
 
+      // En la PWA (Vercel) solo usuarios no-admin pueden acceder
+      if (esVercel && data.usuario?.rol_id === 1) {
+        setError("La versión PWA es solo para usuarios no administradores. Accede desde el escritorio.");
+        return;
+      }
+
       login(data.token, data.usuario)
     } catch {
       setError("No se pudo conectar con el servidor");
+      if (hayOffline) {
+        setMensajeInfo("¿Querés continuar con los datos guardados sin conexión?")
+      }
     } finally {
       setLoading(false);
     }
@@ -103,6 +134,28 @@ function Login() {
               administrativo.
             </p>
           </div>
+
+          {redirecting ? (
+            <div className="pwa-redirecting">
+              <div className="pwa-redirecting-spinner"></div>
+              <p>Redirigiendo a la versión móvil...</p>
+            </div>
+          ) : esPacheco && !isMobile && (
+            <a
+              href={PWA_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-pwa"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="14" rx="2" ry="2"/>
+                <line x1="3" y1="21" x2="21" y2="21"/>
+                <polyline points="9 9 12 12 15 9"/>
+                <line x1="12" y1="12" x2="12" y2="3"/>
+              </svg>
+              Usar PWA 📱
+            </a>
+          )}
         </div>
 
         <div className="login-right">
@@ -112,11 +165,11 @@ function Login() {
 
             {mensajeInfo && (
               <p style={{
-                background: '#e8f5e9',
-                color: '#1b5e20',
+                background: 'var(--success-bg, #e8f5e9)',
+                color: 'var(--success-text, #1b5e20)',
                 padding: '10px 12px',
                 borderRadius: '6px',
-                border: '1px solid #c8e6c9',
+                border: '1px solid var(--success-color, #c8e6c9)',
                 marginBottom: '12px'
               }}>
                 {mensajeInfo}
@@ -146,6 +199,31 @@ function Login() {
               <button type="submit" disabled={loading}>
                 {loading ? "Iniciando..." : "Entrar"}
               </button>
+
+              {hayOffline && (
+                <button
+                  type="button"
+                  className="btn-offline"
+                  onClick={() => offlineLogin()}
+                  style={{
+                    width: '100%',
+                    marginTop: '8px',
+                    padding: '10px',
+                    background: 'transparent',
+                    border: '1px solid var(--border-color, #cbd5e1)',
+                    borderRadius: '6px',
+                    color: 'var(--text-main, #334155)',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                  }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ verticalAlign: 'middle', marginRight: '6px' }}>
+                    <path d="M12 2a10 10 0 1 0 10 10h-2a8 8 0 1 1-8-8V2z"/>
+                    <path d="M12 12V6m0 0L9 9m3-3l3 3"/>
+                  </svg>
+                  Continuar sin conexión
+                </button>
+              )}
           </form>
         </div>
       </div>

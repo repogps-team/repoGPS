@@ -25,10 +25,22 @@ const uploadErrorsTotal = new client.Counter({
   help: "Total upload errors"
 });
 
+const procesoCreatedTotal = new client.Counter({
+  name: "expediente_proceso_created_total",
+  help: "Total procesos created"
+});
+
+const etapaCreatedTotal = new client.Counter({
+  name: "expediente_etapa_created_total",
+  help: "Total etapas created"
+});
+
 register.registerMetric(httpRequestDurationSeconds);
 register.registerMetric(expedienteCreatedTotal);
 register.registerMetric(documentoUploadedTotal);
 register.registerMetric(uploadErrorsTotal);
+register.registerMetric(procesoCreatedTotal);
+register.registerMetric(etapaCreatedTotal);
 
 function metricsMiddleware(req, res, next) {
   if (req.path === "/metrics") {
@@ -53,6 +65,8 @@ module.exports = {
   expedienteCreatedTotal,
   documentoUploadedTotal,
   uploadErrorsTotal,
+  procesoCreatedTotal,
+  etapaCreatedTotal,
   metricsHandler,
   metricsMiddleware
 };

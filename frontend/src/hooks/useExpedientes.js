@@ -8,7 +8,7 @@ export const useExpedientes = () => {
   const [documentos, setDocumentos] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const { get, post, put } = useApi()
+  const { get, post, patch } = useApi()
 
   const cargarExpedientes = useCallback(async () => {
     setLoading(true)
@@ -29,6 +29,7 @@ export const useExpedientes = () => {
     const data = await post('/api/expedientes', {
       proceso_id: Number(expediente.proceso_id),
       disciplina_id: Number(expediente.disciplina_id),
+      subtipo_id: expediente.subtipo_id ? Number(expediente.subtipo_id) : null,
       titulo: expediente.titulo,
       descripcion: expediente.descripcion,
       fecha_termino: expediente.fecha_termino || null
@@ -76,13 +77,35 @@ export const useExpedientes = () => {
     return data
   }, [post, cargarExpedientes])
 
+  const rechazarExpediente = useCallback(async (id, observacion) => {
+    const data = await post(`/api/expedientes/${id}/rechazar`, { observacion })
+    if (data?.expediente) {
+      setExpedientes(prev => prev.map(e => (e.id === data.expediente.id ? data.expediente : e)))
+    } else if (data) {
+      await cargarExpedientes()
+    }
+    return data
+  }, [post, cargarExpedientes])
+
   const actualizarFechaTermino = useCallback(async (id, fecha_termino) => {
-    const data = await put(`/api/expedientes/${id}`, { fecha_termino })
+    const data = await patch(`/api/expedientes/${id}/fecha-termino`, { fecha_termino })
     if (data) {
       setExpedientes(prev => prev.map(e => (e.id === data.id ? { ...e, fecha_termino: data.fecha_termino } : e)))
     }
     return data
-  }, [put])
+  }, [patch])
+
+  const refreshDocumentos = useCallback(async (expedienteId) => {
+    if (!expedienteId) return
+    try {
+      const docData = await get(`/api/documentos/expediente/${expedienteId}`)
+      if (Array.isArray(docData)) {
+        setDocumentos(docData)
+      }
+    } catch {
+      // Silently fail — SW cache will serve if offline
+    }
+  }, [get])
 
   return {
     expedientes,
@@ -96,7 +119,9 @@ export const useExpedientes = () => {
     abrirDetalle,
     cerrarDetalle,
     avanzarExpediente,
-    devolverExpediente
-    , actualizarFechaTermino
+    devolverExpediente,
+    rechazarExpediente,
+    actualizarFechaTermino,
+    refreshDocumentos
   }
 }

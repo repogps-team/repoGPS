@@ -1,0 +1,17 @@
+{{ define "discord.title" }}
+[{{ .Status | toUpper }}] {{ .GroupLabels.alertname }}
+{{ end }}
+
+{{ define "discord.message" }}
+**Severidad:** {{ .CommonLabels.severity }}
+**Descripción:** {{ .CommonAnnotations.description }}
+**Instancia:** {{ .CommonLabels.instance }}
+**Inicio:** {{ (index .Alerts 0).StartsAt.Format "02/01/2006 15:04:05 UTC" }}
+
+{{- if .Alerts }}
+**Alertas activas ({{ len .Alerts }}):**
+{{- range .Alerts }}
+- {{ .Annotations.summary }} ({{ .Labels.severity }})
+{{- end }}
+{{- end }}
+{{ end }}

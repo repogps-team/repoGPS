@@ -1,0 +1,79 @@
+{
+  "uid": "audit-seguridad",
+  "title": "Auditoría / Seguridad y Compliance",
+  "tags": ["auditoria", "seguridad", "compliance"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-30d", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "usuario",
+        "label": "Usuario",
+        "type": "query",
+        "datasource": "Auditoria DB",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": false,
+        "query": "SELECT DISTINCT usuario_nombre as __value, usuario_nombre as __text FROM audit_events WHERE usuario_nombre IS NOT NULL ORDER BY usuario_nombre",
+        "current": { "text": "All", "value": "$__all" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Logins por día",
+      "datasource": "Auditoria DB",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT date_trunc('day', fecha) AS time, COUNT(*) AS value FROM audit_events WHERE accion = 'LOGIN' AND usuario_nombre IN (${usuario:sqlstring}) GROUP BY 1 ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Usuarios sin actividad 30d",
+      "datasource": "Auditoria DB",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT usuario_nombre, MAX(fecha) AS ultimo_acceso FROM audit_events WHERE usuario_nombre IN (${usuario:sqlstring}) GROUP BY usuario_nombre HAVING MAX(fecha) < NOW() - INTERVAL '30 days'"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Acciones sobre configuración",
+      "datasource": "Auditoria DB",
+      "gridPos": { "x": 0, "y": 8, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT fecha, usuario_nombre, accion, entidad, entidad_nombre FROM audit_events WHERE entidad IN ('area', 'contratista', 'proceso', 'rol') AND usuario_nombre IN (${usuario:sqlstring}) ORDER BY fecha DESC LIMIT 100"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Cambios de valores",
+      "datasource": "Auditoria DB",
+      "gridPos": { "x": 0, "y": 16, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT fecha, usuario_nombre, accion, entidad, entidad_nombre, valor_anterior, valor_nuevo FROM audit_events WHERE valor_anterior IS NOT NULL AND usuario_nombre IN (${usuario:sqlstring}) ORDER BY fecha DESC LIMIT 100"
+        }
+      ]
+    }
+  ]
+}

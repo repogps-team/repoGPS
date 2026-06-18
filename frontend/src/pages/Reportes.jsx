@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
 import { useAreas } from '../hooks/useAreas'
 import { useProcesos } from '../hooks/useProcesos'
+import { useUsuarios } from '../hooks/useUsuarios'
+import { useEtapas } from '../hooks/useEtapas'
 
 // UIDs de dashboards de Grafana (configurar después de crearlos en Grafana)
 const DASHBOARD_UIDS = {
@@ -10,40 +12,103 @@ const DASHBOARD_UIDS = {
   productividad: 'expedientes-productividad',
   documentos: 'expedientes-documentos',
   trazabilidad: 'expedientes-trazabilidad',
+  'bandeja-tareas': 'dash-bandeja-tareas',
+  'tiempos-sla': 'dash-tiempos-sla',
+  'funnel-workflow': 'dash-funnel-workflow',
+  'rechazos': 'dash-rechazos',
+  'formularios': 'dash-formularios',
+  'almacenamiento': 'dash-almacenamiento',
+  'usuarios-actividad': 'dash-usuarios-actividad',
+  'comparativa-contratistas': 'dash-comparativa-contratistas',
+  'audit-actividad': 'audit-actividad',
+  'audit-seguridad': 'audit-seguridad',
+  'audit-expediente': 'audit-expediente',
 }
 
 const TABS = [
-  { id: 'general', label: 'Dashboard General' },
+  { id: 'general', label: 'General' },
   { id: 'productividad', label: 'Productividad' },
   { id: 'documentos', label: 'Documentos' },
   { id: 'trazabilidad', label: 'Trazabilidad' },
+  { id: 'bandeja-tareas', label: 'Tareas' },
+  { id: 'tiempos-sla', label: 'Tiempos de Resolución' },
+  { id: 'funnel-workflow', label: 'Flujo por Etapas' },
+  { id: 'rechazos', label: 'Rechazos' },
+  { id: 'formularios', label: 'Formularios' },
+  { id: 'almacenamiento', label: 'Almacenamiento' },
+  { id: 'usuarios-actividad', label: 'Usuarios / Actividad' },
+  { id: 'comparativa-contratistas', label: 'Comparativa Contratistas' },
+  { id: 'auditoria', label: 'Auditoría' },
 ]
+
+const AUDIT_TABS = [
+  { id: 'audit-actividad', label: 'Actividad' },
+  { id: 'audit-seguridad', label: 'Seguridad' },
+  { id: 'audit-expediente', label: 'Expediente' },
+]
+
+function getDefaultFechaDesde() {
+  const d = new Date()
+  d.setDate(d.getDate() - 30)
+  return d.toISOString().split('T')[0]
+}
+
+function getDefaultFechaHasta() {
+  return new Date().toISOString().split('T')[0]
+}
 
 export default function Reportes() {
   const { user } = useAuth()
   const [activeTab, setActiveTab] = useState('general')
+  const [activeAuditTab, setActiveAuditTab] = useState('audit-actividad')
   const [iframeSrc, setIframeSrc] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [hasApplied, setHasApplied] = useState(false)
 
-  // Filtros
+  // Filtros — fecha con defaults, resto vacío (opcional)
   const [areaId, setAreaId] = useState('')
   const [contratistaId, setContratistaId] = useState('')
   const [procesoId, setProcesoId] = useState('')
-  const [fechaDesde, setFechaDesde] = useState('')
-  const [fechaHasta, setFechaHasta] = useState('')
+  const [fechaDesde, setFechaDesde] = useState(getDefaultFechaDesde)
+  const [fechaHasta, setFechaHasta] = useState(getDefaultFechaHasta)
+  const [usuarioId, setUsuarioId] = useState('')
+  const [etapaId, setEtapaId] = useState('')
+
+  const iframeRef = useRef(null)
+  const pollRef = useRef(null)
+  const mountedRef = useRef(true)
+  const loadingTimeoutRef = useRef(null)
+
+  // Agregar 3 segundos extras al overlay de carga
+  const finishLoading = useCallback(() => {
+    if (!mountedRef.current) return
+    loadingTimeoutRef.current = setTimeout(() => {
+      if (mountedRef.current) setIsLoading(false)
+    }, 3000)
+  }, [])
 
   // Cargar datos para filtros
   const { areas, contratistas, cargarAreas, cargarContratistas } = useAreas()
   const { procesos, cargarProcesos } = useProcesos()
+  const { usuarios, cargarUsuarios } = useUsuarios()
+  const { etapas, cargarEtapas } = useEtapas()
 
   useEffect(() => {
     cargarAreas()
     cargarContratistas()
     cargarProcesos()
+    cargarUsuarios()
+    cargarEtapas()
+    return () => {
+      mountedRef.current = false
+      if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current)
+    }
   }, [])
 
   // Construir URL del iframe con filtros como variables de Grafana
-  const buildIframeSrc = useCallback(() => {
-    const uid = DASHBOARD_UIDS[activeTab]
+  const buildIframeSrc = useCallback((tab, auditTab, area, contratista, proceso, desde, hasta, usuario, etapa) => {
+    const dashboardKey = tab === 'auditoria' ? auditTab : tab
+    const uid = DASHBOARD_UIDS[dashboardKey]
     const params = new URLSearchParams({
       orgId: '1',
       kiosk: 'tv',
@@ -51,33 +116,123 @@ export default function Reportes() {
     })
 
     // Variables de Grafana (prefijo var-)
-    if (areaId) params.set('var-area', areaId)
-    if (contratistaId) params.set('var-contratista', contratistaId)
-    if (procesoId) params.set('var-proceso', procesoId)
-    if (fechaDesde) params.set('var-fecha_desde', fechaDesde)
-    if (fechaHasta) params.set('var-fecha_hasta', fechaHasta)
+    if (area) params.set('var-area', area)
+    if (contratista) params.set('var-contratista', contratista)
+    if (proceso) params.set('var-proceso', proceso)
+    if (desde) params.set('var-fecha_desde', desde)
+    if (hasta) params.set('var-fecha_hasta', hasta)
+    if (usuario) params.set('var-usuario', usuario)
+    if (etapa) params.set('var-etapa', etapa)
 
     return `/grafana/d/${uid}?${params.toString()}`
-  }, [activeTab, areaId, contratistaId, procesoId, fechaDesde, fechaHasta])
+  }, [])
 
-  // Actualizar iframe cuando cambian filtros o tab
-  useEffect(() => {
-    setIframeSrc(buildIframeSrc())
-  }, [buildIframeSrc])
+  // Detectar cuando Grafana terminó de cargar (same-origin)
+  const startPollingDashboard = useCallback(() => {
+    // Limpiar polling anterior
+    if (pollRef.current) clearInterval(pollRef.current)
 
-  const clearFilters = () => {
+    pollRef.current = setInterval(() => {
+      try {
+        const iframe = iframeRef.current
+        if (!iframe || !iframe.contentDocument) return
+
+        const doc = iframe.contentDocument
+
+        // Grafana lista si hay paneles visibles
+        const panels = doc.querySelectorAll(
+          '.panel-container, [data-panelid], .dashboard-content'
+        )
+
+        // También verificar que NO esté mostrando el spinner de carga de Grafana
+        const loadingIndicator = doc.querySelectorAll(
+          '.css-1ld0rbn, .css-ueo4r3, [class*="loading"]'
+        )
+
+        if (panels.length > 0 || loadingIndicator.length === 0) {
+          finishLoading()
+          clearInterval(pollRef.current)
+          pollRef.current = null
+        }
+      } catch {
+        // Same-origin fallback: esperar un tiempo fijo
+        // (no debería pasar porque es mismo origen)
+      }
+    }, 150)
+
+    // Timeout de seguridad: ocultar overlay después de 20s máximo
+    setTimeout(() => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current)
+        pollRef.current = null
+      }
+      finishLoading()
+    }, 20000)
+  }, [])
+
+  // Cuando el iframe termina de cargar el HTML, empezamos a sondear los paneles
+  const handleIframeLoad = useCallback(() => {
+    startPollingDashboard()
+  }, [startPollingDashboard])
+
+  // Aplicar filtros: cargar el iframe con los filtros seleccionados
+  const applyFilters = useCallback(() => {
+    setIsLoading(true)
+    setHasApplied(true)
+    const src = buildIframeSrc(
+      activeTab, activeAuditTab, areaId, contratistaId, procesoId, fechaDesde, fechaHasta, usuarioId, etapaId
+    )
+    setIframeSrc(src)
+  }, [activeTab, activeAuditTab, areaId, contratistaId, procesoId, fechaDesde, fechaHasta, usuarioId, etapaId, buildIframeSrc])
+
+  // Limpiar filtros y recargar con defaults
+  const clearAndApply = useCallback(() => {
+    const defaultDesde = getDefaultFechaDesde()
+    const defaultHasta = getDefaultFechaHasta()
     setAreaId('')
     setContratistaId('')
     setProcesoId('')
-    setFechaDesde('')
-    setFechaHasta('')
-  }
+    setFechaDesde(defaultDesde)
+    setFechaHasta(defaultHasta)
+    setUsuarioId('')
+    setEtapaId('')
+    setIsLoading(true)
+    setHasApplied(true)
+    const src = buildIframeSrc(activeTab, activeAuditTab, '', '', '', defaultDesde, defaultHasta, '', '')
+    setIframeSrc(src)
+  }, [activeTab, activeAuditTab, buildIframeSrc])
+
+  // Cambio de tab: cargar el nuevo dashboard con los filtros actuales
+  const handleTabChange = useCallback((tabId) => {
+    setActiveTab(tabId)
+    setIsLoading(true)
+    setHasApplied(true)
+    const auditTab = tabId === 'auditoria' ? activeAuditTab : null
+    setIframeSrc(buildIframeSrc(
+      tabId, auditTab, areaId, contratistaId, procesoId, fechaDesde, fechaHasta, usuarioId, etapaId
+    ))
+  }, [activeAuditTab, areaId, contratistaId, procesoId, fechaDesde, fechaHasta, usuarioId, etapaId, buildIframeSrc])
+
+  // Cambio de sub-tab de auditoría
+  const handleAuditTabChange = useCallback((auditTabId) => {
+    setActiveAuditTab(auditTabId)
+    if (activeTab === 'auditoria') {
+      setIsLoading(true)
+      setHasApplied(true)
+      setIframeSrc(buildIframeSrc(
+        'auditoria', auditTabId, areaId, contratistaId, procesoId, fechaDesde, fechaHasta, usuarioId, etapaId
+      ))
+    }
+  }, [activeTab, areaId, contratistaId, procesoId, fechaDesde, fechaHasta, usuarioId, etapaId, buildIframeSrc])
 
   const areasActivas = areas.filter(area => area.estado_activo !== false)
   const contratistasActivos = contratistas.filter(contratista => contratista.estado_activo !== false)
   const procesosActivos = procesos.filter(proceso => proceso.estado_activo !== false)
+  const usuariosActivos = usuarios.filter(u => u.estado_activo !== false)
+  const etapasActivas = etapas.filter(ep => ep.estado_activo !== false)
 
-  const hasFilters = areaId || contratistaId || procesoId || fechaDesde || fechaHasta
+  const hasFilters = areaId || contratistaId || procesoId || usuarioId || etapaId
+    || fechaDesde !== getDefaultFechaDesde() || fechaHasta !== getDefaultFechaHasta()
 
   if (!user || user.rol_id !== 1) {
     return <Navigate to="/" replace />
@@ -99,12 +254,27 @@ export default function Reportes() {
           <button
             key={tab.id}
             className={`tab-btn ${activeTab === tab.id ? 'active' : ''}`}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => handleTabChange(tab.id)}
           >
             {tab.label}
           </button>
         ))}
       </div>
+
+      {/* Sub-tabs de Auditoría */}
+      {activeTab === 'auditoria' && (
+        <div className="tabs audit-sub-tabs">
+          {AUDIT_TABS.map(tab => (
+            <button
+              key={tab.id}
+              className={`tab-btn sub-tab-btn ${activeAuditTab === tab.id ? 'active' : ''}`}
+              onClick={() => handleAuditTabChange(tab.id)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Filtros globales */}
       <div className="reportes-filters">
@@ -157,25 +327,67 @@ export default function Reportes() {
             />
           </div>
 
-          {hasFilters && (
-            <button className="btn btn-secondary btn-mini" onClick={clearFilters} style={{ alignSelf: 'flex-end' }}>
-              Limpiar filtros
+          <div className="filter-field">
+            <label>Usuario</label>
+            <select value={usuarioId} onChange={e => setUsuarioId(e.target.value)}>
+              <option value="">Todos</option>
+              {usuariosActivos.map(u => (
+                <option key={u.id} value={u.id}>{u.nombre_completo}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filter-field">
+            <label>Etapa</label>
+            <select value={etapaId} onChange={e => setEtapaId(e.target.value)}>
+              <option value="">Todas</option>
+              {etapasActivas.map(ep => (
+                <option key={ep.id} value={ep.id}>{ep.nombre}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filter-actions">
+            <button className="btn btn-primary btn-mini" onClick={applyFilters}>
+              Aplicar filtros
             </button>
-          )}
+            {hasFilters && (
+              <button className="btn btn-secondary btn-mini" onClick={clearAndApply}>
+                Limpiar filtros
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Iframe de Grafana */}
+      {/* Contenedor del iframe + overlay */}
       <div className="reportes-iframe-container">
-        {iframeSrc ? (
+        {hasApplied && (
           <iframe
+            ref={iframeRef}
             src={iframeSrc}
+            onLoad={handleIframeLoad}
             title={`Dashboard ${activeTab}`}
             className="reportes-iframe"
             allowFullScreen
           />
-        ) : (
-          <div className="empty-state">
+        )}
+
+        {/* Overlay de bienvenida */}
+        {!hasApplied && (
+          <div className="reportes-overlay">
+            <div className="reportes-welcome">
+              <span className="material-icons" style={{ fontSize: 48, color: 'var(--primary-color)', marginBottom: 12 }}>analytics</span>
+              <h4>Selecciona los filtros y haz clic en <strong>Aplicar filtros</strong></h4>
+              <p>Usa los filtros superiores para acotar la información y luego carga el dashboard.</p>
+            </div>
+          </div>
+        )}
+
+        {/* Overlay de carga */}
+        {hasApplied && isLoading && (
+          <div className="reportes-overlay">
+            <div className="reportes-spinner" />
             <p>Cargando dashboard...</p>
           </div>
         )}

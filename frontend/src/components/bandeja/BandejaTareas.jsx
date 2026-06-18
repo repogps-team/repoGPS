@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../context/useAuth'
 import { useTareas } from '../../hooks/useTareas'
 
 const BadgeTipo = ({ tipo }) => {
   const estilos = {
-    revision: { bg: '#dbeafe', color: '#1d4ed8' },
-    aprobacion: { bg: '#dcfce7', color: '#166534' },
-    visacion: { bg: '#fef3c7', color: '#92400e' }
+    revision: { bg: 'var(--info-bg, #dbeafe)', color: 'var(--info-text, #1d4ed8)' },
+    aprobacion: { bg: 'var(--success-bg, #dcfce7)', color: 'var(--success-text, #166534)' },
+    visacion: { bg: 'var(--warning-bg, #fef3c7)', color: 'var(--warning-text, #92400e)' }
   }
-  const estilo = estilos[tipo] || { bg: '#f1f5f9', color: '#475569' }
+  const estilo = estilos[tipo] || { bg: 'var(--surface-hover, #f1f5f9)', color: 'var(--text-muted, #475569)' }
 
   const labels = {
     revision: 'Revision',
@@ -31,11 +32,18 @@ const BadgeTipo = ({ tipo }) => {
 }
 
 const BandejaTareas = () => {
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { user } = useAuth()
   const { tareas, loading, error, cargarTareas, marcarVisto, actualizarTarea } = useTareas()
   const [observacion, setObservacion] = useState('')
   const [tareaExpandida, setTareaExpandida] = useState(null)
   const [mostrarFormObs, setMostrarFormObs] = useState(null)
+  const [filtroEstado, setFiltroEstado] = useState(searchParams.get('estado') || 'todas')
+
+  const tareasFiltradas = filtroEstado === 'todas'
+    ? tareas
+    : tareas.filter(t => t.estado === filtroEstado)
 
   useEffect(() => {
     if (user?.id && user?.area_id && user?.rol_id) {
@@ -85,7 +93,7 @@ const BandejaTareas = () => {
         <h2 style={{ marginBottom: '24px', color: 'var(--text-main)' }}>
           Bandeja de Tareas
         </h2>
-        <div style={{ textAlign: 'center', padding: '40px', color: '#ef4444' }}>
+        <div style={{ textAlign: 'center', padding: '40px', color: 'var(--danger-color)' }}>
           Error: {error}
         </div>
       </div>
@@ -97,8 +105,8 @@ const BandejaTareas = () => {
       <h2 style={{ marginBottom: '24px', color: 'var(--text-main)' }}>
         Bandeja de Tareas
         <span style={{
-          background: '#ef4444',
-          color: 'white',
+          background: 'var(--danger-color)',
+          color: 'var(--text-inverse)',
           padding: '4px 12px',
           borderRadius: '12px',
           fontSize: '14px',
@@ -108,7 +116,39 @@ const BandejaTareas = () => {
         </span>
       </h2>
 
-      {tareas.length === 0 ? (
+      {/* Filtros por estado */}
+      <div style={{
+        display: 'flex',
+        gap: '8px',
+        marginBottom: '20px',
+        flexWrap: 'wrap'
+      }}>
+        {[
+          { key: 'todas', label: 'Todas' },
+          { key: 'pendiente', label: 'Nuevas' },
+          { key: 'visto', label: 'Vistas' }
+        ].map(f => (
+          <button
+            key={f.key}
+            onClick={() => setFiltroEstado(f.key)}
+            style={{
+              padding: '6px 16px',
+              borderRadius: '20px',
+              border: `1px solid ${filtroEstado === f.key ? 'var(--primary-color)' : 'var(--border-color)'}`,
+              background: filtroEstado === f.key ? 'var(--primary-color)' : 'transparent',
+              color: filtroEstado === f.key ? 'white' : 'var(--text-muted)',
+              cursor: 'pointer',
+              fontSize: '13px',
+              fontWeight: 500,
+              transition: 'all 0.2s'
+            }}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      {tareasFiltradas.length === 0 ? (
         <div style={{
           background: 'var(--bg-card)',
           border: '1px solid var(--border-color)',
@@ -122,7 +162,7 @@ const BandejaTareas = () => {
             </svg>
           </div>
           <h3 style={{ color: 'var(--text-main)', marginBottom: '8px' }}>
-            No hay tareas pendientes
+            {filtroEstado === 'todas' ? 'No hay tareas pendientes' : `No hay tareas con estado "${filtroEstado}"`}
           </h3>
           <p style={{ color: 'var(--text-muted)' }}>
             Las tareas que requieran tu atencion apareceran aqui
@@ -130,7 +170,7 @@ const BandejaTareas = () => {
         </div>
       ) : (
         <div className="tareas-lista">
-          {tareas.map(tarea => (
+          {tareasFiltradas.map(tarea => (
             <div 
               key={tarea.id} 
               className={`tarea-card ${tareaExpandida === tarea.id ? 'expandida' : ''}`}
@@ -185,7 +225,7 @@ const BandejaTareas = () => {
                 <div style={{
                   padding: '16px 20px',
                   borderTop: '1px solid var(--border-color)',
-                  background: '#f8fafc'
+                  background: 'var(--bg-app)'
                 }}>
                   {mostrarFormObs === tarea.id ? (
                     <div>
@@ -214,21 +254,26 @@ const BandejaTareas = () => {
                         <button 
                           className="btn btn-danger"
                           onClick={() => handleAccion(tarea.id, 'rechazada')}
-                          style={{ background: '#ef4444', color: 'white' }}
                         >
                           Rechazar
                         </button>
                         <button 
                           className="btn btn-primary"
                           onClick={() => handleAccion(tarea.id, 'completada')}
-                          style={{ background: '#22c55e' }}
+                          style={{ background: 'var(--success-color)' }}
                         >
                           Aprobar
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                      <button 
+                        className="btn btn-secondary"
+                        onClick={() => navigate(`/expedientes?abrir=${tarea.expediente_id}`)}
+                      >
+                        Ver Expediente
+                      </button>
                       <button 
                         className="btn btn-secondary"
                         onClick={() => setTareaExpandida(null)}

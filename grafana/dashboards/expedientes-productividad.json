@@ -30,7 +30,7 @@
         "includeAll": true,
         "allValue": 0,
         "multi": false,
-        "query": "SELECT id as __value, nombre as __text FROM areas_mirror WHERE estado_activo = true AND (${contratista} = 0 OR contratista_id = ${contratista}) ORDER BY nombre",
+        "query": "SELECT id as __value, nombre as __text FROM areas_mirror WHERE estado_activo = true AND (0 IN (${contratista:csv}) OR contratista_id IN (${contratista:csv})) ORDER BY nombre",
         "current": { "text": "All", "value": 0 }
       },
       {
@@ -42,7 +42,7 @@
         "includeAll": true,
         "allValue": 0,
         "multi": false,
-        "query": "SELECT id as __value, nombre as __text FROM procesos WHERE estado_activo = true AND (${area} = 0 OR area_id = ${area}) ORDER BY nombre",
+        "query": "SELECT id as __value, nombre as __text FROM procesos WHERE estado_activo = true AND (0 IN (${area:csv}) OR area_id IN (${area:csv})) ORDER BY nombre",
         "current": { "text": "All", "value": 0 }
       },
       {
@@ -71,7 +71,7 @@
         {
           "refId": "A",
           "format": "table",
-          "rawSql": "SELECT um.nombre_completo AS usuario, COUNT(*) FILTER (WHERE ta.estado = 'pendiente') AS pendientes, COUNT(*) FILTER (WHERE ta.estado IN ('completada', 'visto')) AS completadas FROM tareas_asignadas ta LEFT JOIN expedientes e ON ta.expediente_id = e.id LEFT JOIN procesos p ON e.proceso_id = p.id LEFT JOIN usuarios_mirror um ON ta.usuario_id = um.id WHERE e.estado_activo = true AND (${area} = 0 OR p.area_id = ${area}) AND (${proceso} = 0 OR e.proceso_id = ${proceso}) AND ('${fecha_desde}' = '' OR ta.fecha_asignacion::date >= '${fecha_desde}'::date) AND ('${fecha_hasta}' = '' OR ta.fecha_asignacion::date <= '${fecha_hasta}'::date) GROUP BY um.nombre_completo ORDER BY pendientes DESC"
+          "rawSql": "SELECT um.nombre_completo AS usuario, COUNT(*) FILTER (WHERE ta.estado = 'pendiente') AS pendientes, COUNT(*) FILTER (WHERE ta.estado IN ('completada', 'visto')) AS completadas FROM tareas_asignadas ta LEFT JOIN expedientes e ON ta.expediente_id = e.id LEFT JOIN procesos p ON e.proceso_id = p.id LEFT JOIN usuarios_mirror um ON ta.usuario_id = um.id WHERE e.estado_activo = true AND (0 IN (${area:csv}) OR p.area_id IN (${area:csv})) AND (0 IN (${proceso:csv}) OR e.proceso_id IN (${proceso:csv})) AND ('${fecha_desde}' = '' OR ta.fecha_asignacion::date >= '${fecha_desde}'::date) AND ('${fecha_hasta}' = '' OR ta.fecha_asignacion::date <= '${fecha_hasta}'::date) GROUP BY um.nombre_completo ORDER BY pendientes DESC"
         }
       ]
     },
@@ -84,7 +84,7 @@
         {
           "refId": "A",
           "format": "table",
-          "rawSql": "SELECT ep.nombre AS etapa, AVG(EXTRACT(EPOCH FROM (ta.fecha_termino - ta.fecha_asignacion)) / 86400) AS promedio_dias FROM tareas_asignadas ta JOIN etapas_proceso ep ON ta.etapa_id = ep.id LEFT JOIN expedientes e ON ta.expediente_id = e.id LEFT JOIN procesos p ON e.proceso_id = p.id WHERE ta.fecha_termino IS NOT NULL AND e.estado_activo = true AND (${area} = 0 OR p.area_id = ${area}) AND (${proceso} = 0 OR e.proceso_id = ${proceso}) AND ('${fecha_desde}' = '' OR ta.fecha_asignacion::date >= '${fecha_desde}'::date) AND ('${fecha_hasta}' = '' OR ta.fecha_asignacion::date <= '${fecha_hasta}'::date) GROUP BY ep.nombre ORDER BY promedio_dias DESC"
+          "rawSql": "SELECT ep.nombre AS etapa, AVG(EXTRACT(EPOCH FROM (ta.fecha_termino - ta.fecha_asignacion)) / 86400) AS promedio_dias FROM tareas_asignadas ta JOIN etapas_proceso ep ON ta.etapa_id = ep.id LEFT JOIN expedientes e ON ta.expediente_id = e.id LEFT JOIN procesos p ON e.proceso_id = p.id WHERE ta.fecha_termino IS NOT NULL AND e.estado_activo = true AND (0 IN (${area:csv}) OR p.area_id IN (${area:csv})) AND (0 IN (${proceso:csv}) OR e.proceso_id IN (${proceso:csv})) AND ('${fecha_desde}' = '' OR ta.fecha_asignacion::date >= '${fecha_desde}'::date) AND ('${fecha_hasta}' = '' OR ta.fecha_asignacion::date <= '${fecha_hasta}'::date) GROUP BY ep.nombre ORDER BY promedio_dias DESC"
         }
       ]
     }

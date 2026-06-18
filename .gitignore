@@ -31,7 +31,12 @@ Thumbs.db
 
 /pgdata/
 
+coverage/
+lcov.info
+
 # Local development overrides (do not commit)
 docker-compose.local.yml
 nginx/Dockerfile
 nginx/nginx.conf
+.vercel
+.env*

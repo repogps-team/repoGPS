@@ -1,8 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo, Fragment } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { UploadModal } from '../upload/UploadModal'
 import { DocumentTimeline } from '../upload/DocumentTimeline'
 import FormRenderer from '../forms/FormRenderer'
 import { useApi } from '../../hooks/useApi'
+import DataTable from '../shared/DataTable'
+import { formatDate } from '../shared/shared/formatters'
 
 const ExpedienteDetalle = ({
   expediente,
@@ -11,21 +14,34 @@ const ExpedienteDetalle = ({
   onCerrar,
   onAvanzar,
   onDevolver,
+  onRechazar,
   onActualizarFechaTermino,
   onDocumentoUploaded,
   esAdmin = false
 }) => {
   const [showUploadModal, setShowUploadModal] = useState(false)
+  const navigate = useNavigate()
+  const { get } = useApi()
   const [showNuevaVersionModal, setShowNuevaVersionModal] = useState(false)
   const [documentoParaNuevaVersion, setDocumentoParaNuevaVersion] = useState(null)
-  const [expandedDocId, setExpandedDocId] = useState(null)
   const [formulariosAsignados, setFormulariosAsignados] = useState([])
   const [expandedFormId, setExpandedFormId] = useState(null)
-  const [expandedFormDetail, setExpandedFormDetail] = useState(null) // schema + respuestas completas
-  const [formToRespond, setFormToRespond] = useState(null) // { id, nombre, schema }
-  const [formToRespondLoading, setFormToRespondLoading] = useState(false)
+  const [expandedFormDetail, setExpandedFormDetail] = useState(null)
   const [viewingResponse, setViewingResponse] = useState(null)
-  const { get } = useApi()
+  const [transicionesDisponibles, setTransicionesDisponibles] = useState([])
+  const [etapasProceso, setEtapasProceso] = useState([])
+
+  // Refrescar documentos cuando el sync offline completa
+  const handleSyncComplete = useCallback(() => {
+    if (onDocumentoUploaded) {
+      onDocumentoUploaded()
+    }
+  }, [onDocumentoUploaded])
+
+  useEffect(() => {
+    window.addEventListener('repogps:sync-complete', handleSyncComplete)
+    return () => window.removeEventListener('repogps:sync-complete', handleSyncComplete)
+  }, [handleSyncComplete])
 
   const handleAvanzar = async () => {
     const observacion = prompt('Observación (opcional):')
@@ -51,6 +67,19 @@ const ExpedienteDetalle = ({
     }
   }
 
+  const handleRechazar = async () => {
+    if (!window.confirm('¿Estás seguro de rechazar este expediente? Esta acción no se puede deshacer.')) return
+    const observacion = prompt('Motivo del rechazo (opcional):')
+    if (observacion !== null) {
+      try {
+        await onRechazar(expediente.id, observacion)
+        onCerrar()
+      } catch (err) {
+        alert(err.message)
+      }
+    }
+  }
+
   useEffect(() => {
     if (expediente?.id) {
       const cargarFormularios = async () => {
@@ -64,60 +93,106 @@ const ExpedienteDetalle = ({
         }
       }
       cargarFormularios()
-    }
-  }, [expediente?.id, get])
 
-  const handleFormResponseSubmitted = async () => {
-    setFormToRespond(null)
-    try {
-      const data = await get(`/api/forms/expediente/${expediente.id}`)
-      if (Array.isArray(data)) {
-        setFormulariosAsignados(data)
+      // HU-21: Cargar transiciones disponibles para el rol del usuario
+      const cargarTransiciones = async () => {
+        try {
+          const data = await get(`/api/transiciones/available?expediente_id=${expediente.id}`)
+          if (Array.isArray(data)) {
+            setTransicionesDisponibles(data)
+          }
+        } catch (err) {
+          console.error('Error al cargar transiciones disponibles:', err)
+        }
       }
-    } catch (err) {
-      console.error('Error al refrescar formularios:', err)
-    }
-  }
+      cargarTransiciones()
 
-  const handleExpandForm = async (form) => {
-    if (expandedFormId === form.id) {
+      // HU-12: Cargar etapas del proceso para el timeline
+      if (expediente.proceso_id) {
+        const cargarEtapas = async () => {
+          try {
+            const data = await get(`/api/etapas-proceso/proceso/${expediente.proceso_id}`)
+            if (Array.isArray(data)) {
+              setEtapasProceso(data)
+            }
+          } catch (err) {
+            console.error('Error al cargar etapas del proceso:', err)
+          }
+        }
+        cargarEtapas()
+      }
+    }
+  }, [expediente?.id, expediente?.proceso_id, get])
+
+  const handleStartRespond = useCallback((form) => {
+    navigate(`/expedientes/${expediente.id}/responder/${form.id}`)
+  }, [navigate, expediente?.id])
+
+  useEffect(() => {
+    const cargarDetalleFormulario = async () => {
+      if (!expediente?.id || !expandedFormId) {
+        setExpandedFormDetail(null)
+        return
+      }
+
+      try {
+        const [formDef, responses] = await Promise.all([
+          get(`/api/forms/${expandedFormId}`),
+          get(`/api/forms/${expandedFormId}/respuestas`)
+        ])
+
+        const filteredResponses = Array.isArray(responses)
+          ? responses.filter(r => Number(r.expediente_id) === Number(expediente.id))
+          : []
+
+        setExpandedFormDetail({ schema: formDef?.schema, respuestas: filteredResponses })
+      } catch (err) {
+        console.error('Error al cargar detalle del formulario:', err)
+        setExpandedFormDetail({ schema: null, respuestas: [] })
+      }
+    }
+
+    cargarDetalleFormulario()
+  }, [expandedFormId, expediente?.id, get])
+
+  const handleFormRowClick = (row) => {
+    const formId = row.original.id
+    if (expandedFormId === formId) {
+      row.toggleExpanded(false)
       setExpandedFormId(null)
       setExpandedFormDetail(null)
       setViewingResponse(null)
       return
     }
-    setExpandedFormId(form.id)
+
+    row.toggleExpanded(true)
+    setExpandedFormId(formId)
     setViewingResponse(null)
-    // Fetch full form definition (with schema) and responses
-    try {
-      const [formDef, responses] = await Promise.all([
-        get(`/api/forms/${form.id}`),
-        get(`/api/forms/${form.id}/respuestas`)
-      ])
-      const filteredResponses = Array.isArray(responses)
-        ? responses.filter(r => Number(r.expediente_id) === Number(expediente.id))
-        : []
-      setExpandedFormDetail({ schema: formDef?.schema, respuestas: filteredResponses })
-    } catch (err) {
-      console.error('Error al cargar detalle del formulario:', err)
-      setExpandedFormDetail({ schema: null, respuestas: [] })
-    }
   }
 
-  const handleStartRespond = async (form) => {
-    setFormToRespondLoading(true)
-    try {
-      const formDef = await get(`/api/forms/${form.id}`)
-      setFormToRespond({ id: formDef.id, nombre: formDef.nombre, schema: formDef.schema })
-    } catch (err) {
-      console.error('Error al cargar formulario:', err)
-      alert('Error al cargar el formulario')
-    } finally {
-      setFormToRespondLoading(false)
+  // HU-12: Determinar estado de cada etapa para el timeline
+  const getEtapaStatus = (etapa) => {
+    if (!expediente?.etapa_actual_id || etapasProceso.length === 0) return 'pending'
+    const etapaActual = etapasProceso.find(e => e.id === expediente.etapa_actual_id)
+    if (!etapaActual) return 'pending'
+    // Si la etapa actual es "Rechazado", mostrar como rechazado
+    if (etapaActual.nombre?.toLowerCase() === 'rechazado') {
+      if (etapa.id === expediente.etapa_actual_id) return 'rejected'
+      if (etapa.orden < etapaActual.orden) return 'completed'
+      return 'skipped'
     }
+    if (etapa.orden < etapaActual.orden) return 'completed'
+    if (etapa.id === expediente.etapa_actual_id) return 'current'
+    return 'pending'
   }
 
-  if (!expediente) return null
+  const statusIcon = {
+    completed: 'check_circle',
+    current: 'radio_button_checked',
+    rejected: 'cancel',
+    skipped: 'radio_button_unchecked',
+    pending: 'radio_button_unchecked'
+  }
 
   const handleFechaTerminoChange = async (e) => {
     const nuevaFecha = e.target.value
@@ -176,9 +251,185 @@ const ExpedienteDetalle = ({
     setDocumentoParaNuevaVersion(null)
   }
 
+  // Column definitions for Historial table
+  const historialColumns = useMemo(() => [
+    {
+      accessorKey: 'fecha_cambio',
+      header: 'Fecha',
+      cell: (info) => formatDate(info.getValue()),
+      meta: { priority: 'high' }
+    },
+    {
+      accessorKey: 'etapa_anterior_nombre',
+      header: 'De',
+      cell: (info) => info.getValue() || '-',
+      meta: { priority: 'medium' }
+    },
+    {
+      accessorKey: 'etapa_nueva_nombre',
+      header: 'A',
+      cell: (info) => info.getValue() || '-',
+      meta: { priority: 'medium' }
+    },
+    {
+      accessorKey: 'usuario_nombre',
+      header: 'Usuario',
+      cell: (info) => info.getValue() || '-',
+      meta: { priority: 'high' }
+    },
+    {
+      accessorKey: 'observacion',
+      header: 'Observación',
+      cell: (info) => info.getValue() || '-',
+      meta: { priority: 'medium' }
+    }
+  ], [])
+
+  // Column definitions for Documentos table
+  const documentosColumns = useMemo(() => [
+    {
+      accessorKey: 'nombre_archivo',
+      header: 'Nombre',
+      cell: (info) => info.getValue(),
+      meta: { priority: 'high' }
+    },
+    {
+      accessorKey: 'tipo_mime',
+      header: 'Tipo',
+      cell: (info) => info.getValue(),
+      meta: { priority: 'medium' }
+    },
+    {
+      accessorKey: 'tamano_bytes',
+      header: 'Tamaño',
+      cell: (info) => `${(info.getValue() / 1024).toFixed(1)} KB`,
+      meta: { priority: 'low' }
+    },
+    {
+      accessorKey: 'version',
+      header: 'Versión',
+      cell: (info) => `v${info.getValue() || 1}`,
+      meta: { priority: 'low' }
+    },
+    {
+      accessorKey: 'fecha_upload',
+      header: 'Fecha',
+      cell: (info) => formatDate(info.getValue()),
+      meta: { priority: 'medium' }
+    },
+    {
+      id: 'acciones',
+      header: 'Acciones',
+      enableSorting: false,
+      cell: (info) => (
+        <div style={{ display: 'flex', gap: '4px' }}>
+          <button
+            className="btn btn-small"
+            onClick={() => handleDownloadDocumento(info.row.original)}
+            title="Descargar"
+          >
+            <span className="material-icons" style={{ fontSize: '18px' }}>file_download</span>
+          </button>
+          <button
+            className="btn btn-small btn-primary"
+            onClick={() => handleNuevaVersion(info.row.original)}
+            title="Nueva versión"
+          >
+            <span className="material-icons" style={{ fontSize: '18px' }}>add</span>
+          </button>
+        </div>
+      ),
+      meta: { priority: 'high' }
+    }
+  ], [])
+
+  // Column definitions for Formularios table
+  const formulariosColumns = useMemo(() => [
+    {
+      accessorKey: 'nombre',
+      header: 'Nombre del Formulario',
+      cell: (info) => info.getValue(),
+      meta: { priority: 'high' }
+    },
+    {
+      accessorKey: 'respuestas_count',
+      header: 'Respuestas',
+      cell: (info) => info.getValue() || 0,
+      meta: { priority: 'medium' }
+    },
+    {
+      id: 'acciones',
+      header: 'Acciones',
+      enableSorting: false,
+      cell: (info) => (
+        <div style={{ display: 'flex', gap: '4px' }}>
+          {info.row.original.puede_responder ? (
+            <button
+              className="btn-mini btn-edit"
+              onClick={() => handleStartRespond(info.row.original)}
+            >
+              Responder
+            </button>
+          ) : (
+            <span className="role-tag">Solo lectura</span>
+          )}
+        </div>
+      ),
+      meta: { priority: 'high' }
+    }
+  ], [handleStartRespond])
+
+  // Render expanded content for Documentos
+  const renderDocumentoExpanded = useCallback((row) => {
+    const doc = row.original
+    return (
+      <div className="expanded-row-container">
+        <DocumentTimeline documentoId={doc.id} documento={doc} />
+      </div>
+    )
+  }, [])
+
+  // Render expanded content for Formularios
+  const renderFormularioExpanded = useCallback((row) => {
+    const form = row.original
+    return (
+      <div className="expanded-row-container" style={{ padding: '16px' }}>
+        {expandedFormDetail && expandedFormDetail.respuestas && expandedFormDetail.respuestas.length > 0 ? (
+          expandedFormDetail.respuestas.map(r => (
+            <div key={r.id} style={{ marginBottom: '8px', padding: '8px', background: 'var(--bg-secondary, #f5f5f5)', borderRadius: '4px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted, #666)' }}>
+                  {r.usuario_nombre || '-'} — {new Date(r.fecha_envio).toLocaleString()}
+                </span>
+                <button
+                  className="btn-mini"
+                  onClick={() => setViewingResponse(viewingResponse?.id === r.id ? null : r)}
+                >
+                  {viewingResponse?.id === r.id ? 'Ocultar' : 'Ver'}
+                </button>
+              </div>
+              {viewingResponse?.id === r.id && expandedFormDetail.schema && (
+                <div className="formio-renderer-wrapper">
+                  <FormRenderer
+                    formDefinition={{ id: form.id, schema: expandedFormDetail.schema }}
+                    submissionData={r.data}
+                    readOnly={true}
+                  />
+                </div>
+              )}
+            </div>
+          ))
+        ) : (
+          <p className="empty-text">Sin respuestas aún</p>
+        )}
+      </div>
+    )
+  }, [expandedFormDetail, viewingResponse])
+
+  if (!expediente) return null
+
   return (
     <>
-      {/* Expediente Detail Modal */}
       <div className="modal-overlay" onClick={onCerrar}>
         <div className="modal-content modal-content--expediente" onClick={e => e.stopPropagation()}>
           <div className="modal-header">
@@ -208,189 +459,104 @@ const ExpedienteDetalle = ({
               )}
             </div>
 
+            {etapasProceso.length > 0 && (
+              <div className="exp-section">
+                <h4>Progreso del Proceso</h4>
+                <div className="timeline">
+                  {etapasProceso.map((etapa, index) => {
+                    const status = getEtapaStatus(etapa)
+                    return (
+                      <Fragment key={etapa.id}>
+                        <div className={`timeline-step ${status}`}>
+                          <div className="timeline-icon-row">
+                            <span className="material-icons">{statusIcon[status]}</span>
+                            {index < etapasProceso.length - 1 && (
+                              <span className={`timeline-connector timeline-connector--${status === 'completed' ? 'completed' : 'pending'}`} />
+                            )}
+                          </div>
+                          <div className="timeline-label">{etapa.nombre}</div>
+                        </div>
+                      </Fragment>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="exp-actions">
-              <button className="btn btn-primary" onClick={handleAvanzar}>Avanzar</button>
-              <button className="btn btn-secondary" onClick={handleDevolver}>Devolver</button>
+              {transicionesDisponibles.length > 0 || esAdmin ? (
+                <>
+                  <button className="btn btn-primary" onClick={handleAvanzar}>Avanzar</button>
+                  <button className="btn btn-secondary" onClick={handleDevolver}>Devolver</button>
+                  <button className="btn btn-danger" onClick={handleRechazar}>Rechazar</button>
+                </>
+              ) : (
+                <span className="muted" style={{ fontSize: '0.85rem', padding: '8px 0', display: 'inline-block' }}>
+                  No tienes permisos para avanzar este expediente
+                </span>
+              )}
               <button className="btn btn-primary" onClick={() => setShowUploadModal(true)}>Adjuntar archivo</button>
             </div>
 
             <div className="exp-section">
               <h4>Historial</h4>
               {historial.length > 0 ? (
-                <table className="users-table">
-                  <thead><tr><th>Fecha</th><th>De</th><th>A</th><th>Usuario</th><th>Observación</th></tr></thead>
-                  <tbody>
-                    {historial.map(h => (
-                      <tr key={h.id}>
-                        <td>{new Date(h.fecha_cambio).toLocaleString()}</td>
-                        <td>{h.etapa_anterior_nombre || '-'}</td>
-                        <td>{h.etapa_nueva_nombre || '-'}</td>
-                        <td>{h.usuario_nombre || '-'}</td>
-                        <td>{h.observacion || '-'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <DataTable
+                  data={historial}
+                  columns={historialColumns}
+                  config={{
+                    searchable: false,
+                    sortable: true,
+                    pagination: historial.length > 10,
+                    emptyMessage: 'Sin cambios de etapa registrados'
+                  }}
+                />
               ) : <p className="empty-text">Sin cambios de etapa registrados</p>}
             </div>
 
             <div className="exp-section">
               <h4>Documentos</h4>
               {documentos.length > 0 ? (
-                <table className="users-table">
-                  <thead><tr><th>Nombre</th><th>Tipo</th><th>Tamaño</th><th>Versión</th><th>Fecha</th><th>Acciones</th></tr></thead>
-                  <tbody>
-                    {documentos.map(d => (
-                      <>
-                        <tr key={d.id}>
-                          <td>
-                            <button
-                              className="doc-name-toggle"
-                              onClick={() => setExpandedDocId(expandedDocId === d.id ? null : d.id)}
-                              title={expandedDocId === d.id ? 'Ocultar versiones' : 'Ver versiones'}
-                            >
-                              <span className="toggle-icon">{expandedDocId === d.id ? '▼' : '▶'}</span>
-                              {d.nombre_archivo}
-                            </button>
-                          </td>
-                          <td>{d.tipo_mime}</td>
-                          <td>{(d.tamano_bytes / 1024).toFixed(1)} KB</td>
-                          <td>v{d.version || 1}</td>
-                          <td>{new Date(d.fecha_upload).toLocaleDateString()}</td>
-                          <td>
-                            <button
-                              className="btn btn-small"
-                              onClick={() => handleDownloadDocumento(d)}
-                              title="Descargar"
-                            >
-                              📥
-                            </button>
-                            <button
-                              className="btn btn-small btn-primary"
-                              onClick={() => handleNuevaVersion(d)}
-                              title="Nueva versión"
-                              style={{ marginLeft: '4px' }}
-                            >
-                              ➕
-                            </button>
-                          </td>
-                        </tr>
-                        {expandedDocId === d.id && (
-                          <tr key={`${d.id}-timeline`}>
-                            <td colSpan={6}>
-                              <DocumentTimeline documentoId={d.id} documento={d} />
-                            </td>
-                          </tr>
-                        )}
-                      </>
-                    ))}
-                  </tbody>
-                </table>
+                <DataTable
+                  data={documentos}
+                  columns={documentosColumns}
+                  config={{
+                    searchable: false,
+                    sortable: true,
+                    pagination: documentos.length > 10,
+                    emptyMessage: 'Sin documentos adjuntos',
+                    enableExpanding: true,
+                    singleExpanding: true,
+                    onRowClick: (row) => row.toggleExpanded()
+                  }}
+                  renderExpanded={renderDocumentoExpanded}
+                />
               ) : <p className="empty-text">Sin documentos adjuntos</p>}
             </div>
 
             <div className="exp-section">
               <h4>Formularios Asignados</h4>
               {formulariosAsignados.length > 0 ? (
-                <>
-                  <table className="users-table">
-                    <thead>
-                      <tr>
-                        <th>Nombre del Formulario</th>
-                        <th>Respuestas</th>
-                        <th>Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {formulariosAsignados.map(f => (
-                        <>
-                          <tr key={f.id}>
-                            <td>
-                              <button
-                                className="doc-name-toggle"
-                                onClick={() => handleExpandForm(f)}
-                                title={expandedFormId === f.id ? 'Ocultar respuestas' : 'Ver respuestas'}
-                              >
-                                <span className="toggle-icon">{expandedFormId === f.id ? '▼' : '▶'}</span>
-                                {f.nombre}
-                              </button>
-                            </td>
-                            <td>{f.respuestas_count || 0}</td>
-                            <td>
-                              {f.puede_responder ? (
-                                <button
-                                  className="btn-mini btn-edit"
-                                  onClick={() => handleStartRespond(f)}
-                                  disabled={formToRespondLoading}
-                                >
-                                  {formToRespondLoading ? 'Cargando...' : 'Responder'}
-                                </button>
-                              ) : (
-                                <span className="role-tag">Solo lectura</span>
-                              )}
-                            </td>
-                          </tr>
-                          {expandedFormId === f.id && expandedFormDetail && (
-                            <tr key={`${f.id}-responses`}>
-                              <td colSpan={3}>
-                                <div style={{ padding: '8px 0' }}>
-                                  {expandedFormDetail.respuestas && expandedFormDetail.respuestas.length > 0 ? (
-                                    expandedFormDetail.respuestas.map(r => (
-                                      <div key={r.id} style={{ marginBottom: '8px', padding: '8px', background: 'var(--bg-secondary, #f5f5f5)', borderRadius: '4px' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                                          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted, #666)' }}>
-                                            {r.usuario_nombre || '-'} — {new Date(r.fecha_envio).toLocaleString()}
-                                          </span>
-                                          <button
-                                            className="btn-mini"
-                                            onClick={() => setViewingResponse(viewingResponse?.id === r.id ? null : r)}
-                                          >
-                                            {viewingResponse?.id === r.id ? 'Ocultar' : 'Ver'}
-                                          </button>
-                                        </div>
-                                        {viewingResponse?.id === r.id && expandedFormDetail.schema && (
-                                          <div className="formio-renderer-wrapper">
-                                            <FormRenderer
-                                              formDefinition={{ id: f.id, schema: expandedFormDetail.schema }}
-                                              submissionData={r.data}
-                                              readOnly={true}
-                                            />
-                                          </div>
-                                        )}
-                                      </div>
-                                    ))
-                                  ) : (
-                                    <p className="empty-text">Sin respuestas aún</p>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                          )}
-                        </>
-                      ))}
-                    </tbody>
-                  </table>
-                  {formToRespond && (
-                    <div style={{ marginTop: '12px', padding: '12px', border: '1px solid var(--border-color, #ddd)', borderRadius: '4px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                        <h4 style={{ margin: 0 }}>Responder: {formToRespond.nombre}</h4>
-                        <button className="btn btn-secondary" onClick={() => setFormToRespond(null)}>Cancelar</button>
-                      </div>
-                      <FormRenderer
-                        formDefinition={formToRespond}
-                        expedienteId={expediente.id}
-                        onSubmitComplete={handleFormResponseSubmitted}
-                      />
-                    </div>
-                  )}
-                </>
+                <DataTable
+                  data={formulariosAsignados}
+                  columns={formulariosColumns}
+                  config={{
+                    searchable: false,
+                    sortable: true,
+                    pagination: formulariosAsignados.length > 10,
+                    emptyMessage: 'Sin formularios asignados',
+                    enableExpanding: true,
+                    singleExpanding: true,
+                    onRowClick: handleFormRowClick
+                  }}
+                  renderExpanded={renderFormularioExpanded}
+                />
               ) : <p className="empty-text">Sin formularios asignados</p>}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Upload Modal for new documents - rendered as separate overlay */}
       {showUploadModal && (
         <UploadModal
           isOpen={showUploadModal}
@@ -400,7 +566,6 @@ const ExpedienteDetalle = ({
         />
       )}
 
-      {/* Upload Modal for new version of existing document - rendered as separate overlay */}
       {showNuevaVersionModal && (
         <UploadModal
           isOpen={showNuevaVersionModal}

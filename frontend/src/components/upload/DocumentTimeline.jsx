@@ -61,7 +61,9 @@ export const DocumentTimeline = ({ documentoId, documento }) => {
             className="timeline-toggle"
             onClick={handleToggle}
           >
-            <span className="toggle-icon">{isExpanded ? '▼' : '▶'}</span>
+            <span className="material-icons toggle-icon" style={{ fontSize: '18px' }}>
+              {isExpanded ? 'expand_more' : 'chevron_right'}
+            </span>
             <span>Versiones ({versiones.length || currentVersion})</span>
           </button>
 

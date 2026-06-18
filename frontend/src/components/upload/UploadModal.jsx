@@ -1,11 +1,19 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { useDocumentos } from '../../hooks/useDocumentos'
 
 export const UploadModal = ({ isOpen, onClose, expedienteId, documentoId, onUploadComplete }) => {
   const [selectedFile, setSelectedFile] = useState(null)
   const [descripcion, setDescripcion] = useState('')
+  const [offlineSuccess, setOfflineSuccess] = useState(null)
+  const offlineTimerRef = useRef(null)
   const { uploadDocumento, crearVersion, uploading, uploadProgress, error, clearError } = useDocumentos()
+
+  useEffect(() => {
+    return () => {
+      if (offlineTimerRef.current) clearTimeout(offlineTimerRef.current)
+    }
+  }, [])
 
   // modo 'nuevaVersion' =true cuando documentoId está presente
   const isNuevaVersion = !!documentoId
@@ -63,16 +71,29 @@ export const UploadModal = ({ isOpen, onClose, expedienteId, documentoId, onUplo
         onUploadComplete(result)
       }
 
-      // Reset and close
-      setSelectedFile(null)
-      setDescripcion('')
-      onClose()
+      if (result?.offline) {
+        // Offline queue — show success and auto-close
+        setOfflineSuccess(`"${result.nombre}" guardado sin conexión. Se sincronizará automáticamente.`)
+        offlineTimerRef.current = setTimeout(() => {
+          setOfflineSuccess(null)
+          setSelectedFile(null)
+          setDescripcion('')
+          onClose()
+        }, 2500)
+      } else {
+        // Online upload — reset and close
+        setSelectedFile(null)
+        setDescripcion('')
+        onClose()
+      }
     } catch {
       // Error is handled by the hook
     }
   }
 
   const handleClose = () => {
+    if (offlineTimerRef.current) clearTimeout(offlineTimerRef.current)
+    setOfflineSuccess(null)
     setSelectedFile(null)
     setDescripcion('')
     clearError()
@@ -165,6 +186,17 @@ export const UploadModal = ({ isOpen, onClose, expedienteId, documentoId, onUplo
               {error}
             </div>
           )}
+
+          {/* Offline success */}
+          {offlineSuccess && (
+            <div className="upload-success-message">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                <polyline points="22 4 12 14.01 9 11.01"/>
+              </svg>
+              <span>{offlineSuccess}</span>
+            </div>
+          )}
         </div>
 
         <div className="upload-modal-footer">
@@ -250,7 +282,7 @@ export const UploadModal = ({ isOpen, onClose, expedienteId, documentoId, onUplo
 
         .upload-dropzone.reject {
           border-color: var(--danger-color, #f44336);
-          background: #fff9f9;
+          background: rgba(239, 68, 68, 0.08);
         }
 
         .upload-dropzone.disabled {
@@ -378,6 +410,19 @@ export const UploadModal = ({ isOpen, onClose, expedienteId, documentoId, onUplo
           border: 1px solid rgba(239, 68, 68, 0.3);
           border-radius: 6px;
           color: var(--danger-color, #c62828);
+          font-size: 14px;
+          margin-bottom: 16px;
+        }
+
+        .upload-success-message {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 12px;
+          background: rgba(16, 185, 129, 0.1);
+          border: 1px solid rgba(16, 185, 129, 0.3);
+          border-radius: 6px;
+          color: var(--success-color, #065f46);
           font-size: 14px;
           margin-bottom: 16px;
         }

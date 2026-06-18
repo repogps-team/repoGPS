@@ -65,3 +65,26 @@ groups:
         annotations:
           summary: "Upload errors detected"
           description: "Upload errors are occurring in ms-expedientes."
+
+  # ============================================
+  # Blackbox HTTP probe alerts
+  # ============================================
+  - name: blackbox-alerts
+    rules:
+      - alert: ServiceDown
+        expr: probe_success == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.instance }} is DOWN"
+          description: "HTTP probe to {{ $labels.instance }} failed for more than 1 minute."
+
+      - alert: ServiceSlow
+        expr: probe_duration_seconds > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} is slow"
+          description: "HTTP probe to {{ $labels.instance }} took more than 5 seconds."

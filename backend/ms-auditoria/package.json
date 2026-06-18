@@ -1,0 +1,23 @@
+{
+  "name": "ms-auditoria",
+  "version": "1.0.0",
+  "description": "Microservicio de Auditoría (eventos de trazabilidad)",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js",
+    "test": "jest",
+    "test:coverage": "jest --coverage"
+  },
+  "devDependencies": {
+    "jest": "^30.4.2",
+    "supertest": "^7.2.2"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.1",
+    "express": "^5.2.1",
+    "pg": "^8.20.0",
+    "prom-client": "^15.1.3"
+  }
+}

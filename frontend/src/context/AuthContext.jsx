@@ -20,6 +20,8 @@ export const AuthProvider = ({ children }) => {
   const login = useCallback((token, userData) => {
     localStorage.setItem('token', token)
     localStorage.setItem('user', JSON.stringify(userData))
+    localStorage.setItem('lastOfflineUser', JSON.stringify(userData))
+    localStorage.setItem('lastOfflineToken', token)
     setUser(userData)
   }, [])
 
@@ -30,8 +32,23 @@ export const AuthProvider = ({ children }) => {
     setUser(null)
   }, [])
 
+  const offlineLogin = useCallback(() => {
+    const lastUser = localStorage.getItem('lastOfflineUser')
+    const lastToken = localStorage.getItem('lastOfflineToken')
+    if (lastUser) {
+      const userData = JSON.parse(lastUser)
+      localStorage.setItem('user', JSON.stringify(userData))
+      setUser(userData)
+      if (lastToken) {
+        localStorage.setItem('token', lastToken)
+      }
+      return true
+    }
+    return false
+  }, [])
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, offlineLogin }}>
       {children}
     </AuthContext.Provider>
   )

@@ -221,7 +221,7 @@ function createFormRoutes(pool, authMiddleware, MS_USUARIOS_URL) {
                     COUNT(fr.id) AS respuestas_count
                  FROM form_assignments fa
                  INNER JOIN form_definitions fd ON fa.form_definition_id = fd.id
-                 LEFT JOIN form_responses fr ON fr.form_definition_id = fd.id AND fr.expediente_id = fa.expediente_id
+                 LEFT JOIN form_responses fr ON fr.formulario_id = fd.id AND fr.expediente_id = fa.expediente_id
                  WHERE fa.expediente_id = $1 AND fd.estado_activo = true
                  GROUP BY fd.id, fa.fecha_asignacion
                  ORDER BY fa.fecha_asignacion DESC`,
@@ -299,7 +299,7 @@ function createFormRoutes(pool, authMiddleware, MS_USUARIOS_URL) {
 
             // Insertar la respuesta
             const result = await pool.query(
-                'INSERT INTO form_responses (form_definition_id, expediente_id, usuario_id, data) VALUES ($1, $2, $3, $4) RETURNING *',
+                'INSERT INTO form_responses (formulario_id, expediente_id, usuario_id, data) VALUES ($1, $2, $3, $4) RETURNING *',
                 [formId, expediente_id, req.user.id, JSON.stringify(data)]
             );
             res.status(201).json(result.rows[0]);
@@ -335,10 +335,10 @@ function createFormRoutes(pool, authMiddleware, MS_USUARIOS_URL) {
                     e.titulo AS expediente_titulo,
                     p.area_id
                 FROM form_responses fr
-                INNER JOIN form_definitions fd ON fr.form_definition_id = fd.id
+                INNER JOIN form_definitions fd ON fr.formulario_id = fd.id
                 INNER JOIN expedientes e ON fr.expediente_id = e.id
                 INNER JOIN procesos p ON e.proceso_id = p.id
-                WHERE fr.form_definition_id = $1
+                WHERE fr.formulario_id = $1
             `;
             const params = [formId];
 

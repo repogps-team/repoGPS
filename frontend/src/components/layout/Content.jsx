@@ -32,10 +32,19 @@ const ThemeToggle = () => {
   )
 }
 
-const Content = ({ titulo, children }) => {
+const Content = ({ titulo, children, isAdmin, sidebarOpen, onToggleSidebar }) => {
   return (
     <main className="content">
       <header className="content-header">
+        {isAdmin && (
+          <button
+            className="hamburger"
+            onClick={onToggleSidebar}
+            aria-label={sidebarOpen ? 'Cerrar menú' : 'Abrir menú'}
+          >
+            {sidebarOpen ? '✕' : '☰'}
+          </button>
+        )}
         <h1>{titulo}</h1>
         <div className="header-actions">
           <ThemeToggle />

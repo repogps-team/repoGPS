@@ -1,0 +1,116 @@
+{
+  "uid": "dash-tiempos-sla",
+  "title": "Reportes / Tiempos de Resolución / SLA",
+  "tags": ["reportes", "tiempos", "sla"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-30d", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "contratista",
+        "label": "Contratista",
+        "type": "query",
+        "datasource": "Expedientes DB",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": 0,
+        "multi": false,
+        "query": "SELECT id as __value, razon_social as __text FROM contratistas_mirror WHERE estado_activo = true ORDER BY razon_social",
+        "current": { "text": "All", "value": 0 }
+      },
+      {
+        "name": "area",
+        "label": "Área",
+        "type": "query",
+        "datasource": "Expedientes DB",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": 0,
+        "multi": false,
+        "query": "SELECT id as __value, nombre as __text FROM areas_mirror WHERE estado_activo = true AND (0 IN (${contratista:csv}) OR contratista_id IN (${contratista:csv})) ORDER BY nombre",
+        "current": { "text": "All", "value": 0 }
+      },
+      {
+        "name": "proceso",
+        "label": "Proceso",
+        "type": "query",
+        "datasource": "Expedientes DB",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": 0,
+        "multi": false,
+        "query": "SELECT id as __value, nombre as __text FROM procesos WHERE estado_activo = true AND (0 IN (${area:csv}) OR area_id IN (${area:csv})) ORDER BY nombre",
+        "current": { "text": "All", "value": 0 }
+      },
+      {
+        "name": "etapa",
+        "label": "Etapa",
+        "type": "query",
+        "datasource": "Expedientes DB",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": 0,
+        "multi": false,
+        "query": "SELECT id as __value, nombre as __text FROM etapas_proceso WHERE estado_activo = true ORDER BY proceso_id, orden",
+        "current": { "text": "All", "value": 0 }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "barchart",
+      "title": "Tiempo Promedio por Proceso (días)",
+      "datasource": "Expedientes DB",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT p.nombre AS proceso, AVG(EXTRACT(EPOCH FROM (COALESCE(e.fecha_termino, now()) - e.fecha_creacion)) / 86400) AS promedio_dias FROM expedientes e JOIN procesos p ON e.proceso_id = p.id WHERE e.estado_activo = true AND (0 IN (${area:csv}) OR p.area_id IN (${area:csv})) AND (0 IN (${proceso:csv}) OR e.proceso_id IN (${proceso:csv})) AND (0 IN (${contratista:csv}) OR e.contratista_id IN (${contratista:csv})) AND (0 IN (${etapa:csv}) OR e.etapa_actual_id IN (${etapa:csv})) AND e.fecha_termino IS NOT NULL GROUP BY p.nombre ORDER BY promedio_dias DESC"
+        }
+      ]
+    },
+    {
+      "type": "barchart",
+      "title": "Distribución de Tiempos de Resolución",
+      "datasource": "Expedientes DB",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT CASE WHEN dias <= 1 THEN '0-1 días' WHEN dias <= 3 THEN '1-3 días' WHEN dias <= 7 THEN '3-7 días' WHEN dias <= 14 THEN '7-14 días' WHEN dias <= 30 THEN '14-30 días' ELSE '30+ días' END AS rango, COUNT(*) AS total FROM (SELECT EXTRACT(EPOCH FROM (COALESCE(e.fecha_termino, now()) - e.fecha_creacion)) / 86400 AS dias FROM expedientes e LEFT JOIN procesos p ON e.proceso_id = p.id WHERE e.estado_activo = true AND (0 IN (${area:csv}) OR p.area_id IN (${area:csv})) AND (0 IN (${proceso:csv}) OR e.proceso_id IN (${proceso:csv})) AND (0 IN (${contratista:csv}) OR e.contratista_id IN (${contratista:csv})) AND (0 IN (${etapa:csv}) OR e.etapa_actual_id IN (${etapa:csv}))) sub GROUP BY rango ORDER BY MIN(dias)"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Expedientes Atrasados",
+      "datasource": "Expedientes DB",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT e.id, e.titulo, p.nombre AS proceso, am.nombre AS area, EXTRACT(EPOCH FROM (now() - e.fecha_creacion)) / 86400 AS dias_transcurridos, CASE WHEN ep.tipo_etapa = 'final' OR ep.es_final THEN 'Terminado' ELSE 'En Proceso' END AS estado FROM expedientes e JOIN procesos p ON e.proceso_id = p.id LEFT JOIN areas_mirror am ON p.area_id = am.id LEFT JOIN etapas_proceso ep ON e.etapa_actual_id = ep.id WHERE e.estado_activo = true AND (0 IN (${area:csv}) OR p.area_id IN (${area:csv})) AND (0 IN (${proceso:csv}) OR e.proceso_id IN (${proceso:csv})) AND (0 IN (${contratista:csv}) OR e.contratista_id IN (${contratista:csv})) AND (0 IN (${etapa:csv}) OR e.etapa_actual_id IN (${etapa:csv})) AND EXTRACT(EPOCH FROM (now() - e.fecha_creacion)) / 86400 > 7 ORDER BY dias_transcurridos DESC"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Tendencia Mensual de Tiempo Promedio",
+      "datasource": "Expedientes DB",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT date_trunc('month', e.fecha_creacion) AS time, AVG(EXTRACT(EPOCH FROM (COALESCE(e.fecha_termino, now()) - e.fecha_creacion)) / 86400) AS value FROM expedientes e LEFT JOIN procesos p ON e.proceso_id = p.id WHERE e.estado_activo = true AND (0 IN (${area:csv}) OR p.area_id IN (${area:csv})) AND (0 IN (${proceso:csv}) OR e.proceso_id IN (${proceso:csv})) AND (0 IN (${contratista:csv}) OR e.contratista_id IN (${contratista:csv})) AND (0 IN (${etapa:csv}) OR e.etapa_actual_id IN (${etapa:csv})) GROUP BY 1 ORDER BY 1"
+        }
+      ]
+    }
+  ]
+}

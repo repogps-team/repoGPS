@@ -10,7 +10,20 @@ const httpRequestDurationSeconds = new client.Histogram({
   buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2, 5]
 });
 
+const loginTotal = new client.Counter({
+  name: "usuarios_login_total",
+  help: "Total login attempts",
+  labelNames: ["status"]
+});
+
+const userCreatedTotal = new client.Counter({
+  name: "usuarios_created_total",
+  help: "Total users created"
+});
+
 register.registerMetric(httpRequestDurationSeconds);
+register.registerMetric(loginTotal);
+register.registerMetric(userCreatedTotal);
 
 function metricsMiddleware(req, res, next) {
   if (req.path === "/metrics") {
@@ -32,6 +45,8 @@ async function metricsHandler(req, res) {
 
 module.exports = {
   register,
+  loginTotal,
+  userCreatedTotal,
   metricsHandler,
   metricsMiddleware
 };

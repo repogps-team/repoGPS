@@ -5,7 +5,8 @@ const { Pool } = require("pg");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
-const { metricsHandler, metricsMiddleware } = require("./src/metrics");
+const { metricsHandler, metricsMiddleware, loginTotal, userCreatedTotal } = require("./src/metrics");
+const { emitAudit } = require("./lib/auditClient");
 
 const app = express();
 app.use(cors());
@@ -171,7 +172,21 @@ app.post("/api/usuarios", async (req, res) => {
       token_activacion: tokenActivacion
     });
 
+    userCreatedTotal.inc();
     res.status(201).json(nuevoUsuario);
+
+    emitAudit({
+      usuario_id: req.user?.id || null,
+      usuario_nombre: req.user?.nombre_completo || null,
+      usuario_email: req.user?.correo || null,
+      accion: "CREATE",
+      entidad: "usuario",
+      entidad_id: nuevoUsuario.id,
+      entidad_nombre: nuevoUsuario.nombre_completo,
+      valor_nuevo: { nombre_completo, correo, rol_id },
+      ip: req.ip,
+      user_agent: req.get("user-agent"),
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -367,6 +382,19 @@ app.put("/api/usuarios/:id", async (req, res) => {
 
     await pool.query("COMMIT");
     res.json({ message: "Usuario y área actualizados correctamente" });
+
+    emitAudit({
+      usuario_id: req.user?.id || null,
+      usuario_nombre: req.user?.nombre_completo || null,
+      usuario_email: req.user?.correo || null,
+      accion: "UPDATE",
+      entidad: "usuario",
+      entidad_id: Number(id),
+      entidad_nombre: nombre_completo,
+      valor_nuevo: { rol_id, area_id, nombre_completo, correo },
+      ip: req.ip,
+      user_agent: req.get("user-agent"),
+    });
   } catch (err) {
     await pool.query("ROLLBACK");
     console.error(err);
@@ -384,6 +412,17 @@ app.patch("/api/usuarios/:id/estado", async (req, res) => {
       id,
     ]);
     res.json({ message: "Estado actualizado correctamente" });
+
+    emitAudit({
+      usuario_id: req.user?.id || null,
+      usuario_nombre: req.user?.nombre_completo || null,
+      usuario_email: req.user?.correo || null,
+      accion: estado_activo ? "ACTIVATE" : "DEACTIVATE",
+      entidad: "usuario",
+      entidad_id: Number(id),
+      ip: req.ip,
+      user_agent: req.get("user-agent"),
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -466,6 +505,16 @@ async function migrarPasswords() {
 
 app.post("/api/logout", (req, res) => {
   res.json({ message: "Sesión cerrada correctamente" });
+
+  emitAudit({
+    usuario_id: req.user?.id || null,
+    usuario_nombre: req.user?.nombre_completo || null,
+    usuario_email: req.user?.correo || null,
+    accion: "LOGOUT",
+    entidad: "usuario",
+    ip: req.ip,
+    user_agent: req.get("user-agent"),
+  });
 });
 
 // Endpoint de login - valida credenciales y retorna token con datos del usuario
@@ -486,20 +535,25 @@ app.post("/api/login", async (req, res) => {
     );
 
     if (result.rows.length === 0) {
+      loginTotal.inc({ status: "error" });
       return res.status(401).json({ error: "Credenciales inválidas" });
     }
 
     const usuario = result.rows[0];
 
     if (!usuario.estado_activo) {
+      loginTotal.inc({ status: "error" });
       return res.status(403).json({ error: "Usuario inactivo" });
     }
 
     // Verificar password con bcrypt (HU-01)
     const match = await bcrypt.compare(password, usuario.password_hash);
     if (!match) {
+      loginTotal.inc({ status: "error" });
       return res.status(401).json({ error: "Credenciales inválidas" });
     }
+
+    loginTotal.inc({ status: "success" });
 
     // Generar JWT con area_id
     // Obtener el área principal del usuario (primera asignada)
@@ -544,6 +598,18 @@ app.post("/api/login", async (req, res) => {
         area_nombre: areaNombre,
       },
     });
+
+    emitAudit({
+      usuario_id: usuario.id,
+      usuario_nombre: usuario.nombre_completo,
+      usuario_email: usuario.correo,
+      accion: "LOGIN",
+      entidad: "usuario",
+      entidad_id: usuario.id,
+      entidad_nombre: usuario.nombre_completo,
+      ip: req.ip,
+      user_agent: req.get("user-agent"),
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -551,8 +617,13 @@ app.post("/api/login", async (req, res) => {
 
 // Iniciar servidor en puerto 3000
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, async () => {
-  console.log(`Servidor ms-usuarios corriendo en el puerto ${PORT}`);
-  // Ejecutar migración una vez al iniciar
-  await migrarPasswords();
-});
+
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, async () => {
+    console.log(`Servidor ms-usuarios corriendo en el puerto ${PORT}`);
+    // Ejecutar migración una vez al iniciar
+    await migrarPasswords();
+  });
+}
+
+module.exports = app;

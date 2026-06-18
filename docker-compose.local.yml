@@ -110,6 +110,26 @@ services:
       - app-network
 
   # ============================================
+  # Microservicio Auditoría (Directo sin build - usa código local)
+  # ============================================
+  ms-auditoria:
+    image: node:18-alpine
+    container_name: ms-auditoria
+    working_dir: /app
+    command: sh -c "npm install && node index.js"
+    environment:
+      - DB_USER=postgres
+      - DB_HOST=db_auditoria
+      - DB_NAME=db_auditoria
+      - DB_PASSWORD=password123
+      - DB_PORT=5432
+      - PORT=3004
+    volumes:
+      - ./backend/ms-auditoria:/app
+    networks:
+      - app-network
+
+  # ============================================
   # Frontend (Build local desde repositorio)
   # ============================================
   frontend:
@@ -143,6 +163,7 @@ services:
       - ms-mantenedor
       - ms-expedientes
       - ms-notificaciones
+      - ms-auditoria
     networks:
       - app-network
 

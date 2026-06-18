@@ -171,6 +171,18 @@ CREATE TABLE form_responses (
     estado VARCHAR(20) DEFAULT 'completado'
 );
 
+-- Transiciones permitidas por rol (HU-21)
+CREATE TABLE IF NOT EXISTS transiciones_permitidas (
+    id SERIAL PRIMARY KEY,
+    proceso_id INTEGER NOT NULL REFERENCES procesos(id) ON DELETE CASCADE,
+    etapa_from_id INTEGER NOT NULL REFERENCES etapas_proceso(id) ON DELETE CASCADE,
+    etapa_to_id INTEGER NOT NULL REFERENCES etapas_proceso(id) ON DELETE CASCADE,
+    rol_id INTEGER NOT NULL,
+    creado_por INTEGER REFERENCES db_usuarios.usuarios(id),
+    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(proceso_id, etapa_from_id, etapa_to_id, rol_id)
+);
+
 -- ******************************************************
 -- ESPEJO MANTENEDOR (para reportes en Grafana)
 -- ******************************************************

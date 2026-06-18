@@ -1,0 +1,30 @@
+name: Deploy PWA a Vercel
+
+on:
+  push:
+    branches:
+      - feature/pwa
+      - main
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/vercel-deploy.yml'
+
+jobs:
+  deploy:
+    name: Build y Deploy a Vercel
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Deploy a Vercel
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: npx vercel deploy --prod --token $VERCEL_TOKEN --build-env VITE_API_URL="" --build-env VITE_PWA_URL="https://repo-gps.vercel.app"
