@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const crypto = require("crypto");
 const { Pool } = require("pg");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
@@ -28,6 +29,9 @@ const pool = new Pool({
 
 // URL del microservicio ms-mantenedor para API Composition
 const MS_MANTENEDOR_URL = process.env.MS_MANTENEDOR_URL || "http://ms-mantenedor:3001";
+
+// URL del microservicio ms-notificaciones para eventos
+const MS_NOTIFICACIONES_URL = process.env.MS_NOTIFICACIONES_URL || "http://ms-notificaciones:3003";
 
 // ============================================
 // HELPERS - API Composition
@@ -63,6 +67,28 @@ async function fetchAreasByIds(areaIds) {
 }
 
 // ============================================
+// HELPERS - Eventos a ms-notificaciones
+// ============================================
+
+/**
+ * Envia un evento fire-and-forget a ms-notificaciones.
+ * No bloquea - si falla, solo se loguea el error.
+ * @param {string} tipo - Tipo de evento (ej: 'USUARIO_CREADO')
+ * @param {object} data - Datos del evento
+ */
+async function enviarEvento(tipo, data) {
+  try {
+    await fetch(`${MS_NOTIFICACIONES_URL}/api/eventos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tipo, data })
+    });
+  } catch (err) {
+    console.error('Error enviando notificacion:', err.message);
+  }
+}
+
+// ============================================
 // ENDPOINTS ROLES
 // ============================================
 
@@ -81,18 +107,22 @@ app.get("/api/roles", async (req, res) => {
 // ENDPOINTS USUARIOS
 // ============================================
 
-// POST /api/usuarios - Crear nuevo usuario
+// POST /api/usuarios - Crear nuevo usuario (inactivo, con token de activacion)
 app.post("/api/usuarios", async (req, res) => {
-  const { rol_id, area_id, nombre_completo, correo, password_hash } = req.body;
+  const { rol_id, area_id, nombre_completo, correo } = req.body;
 
   try {
+    // Generar token de activacion (UUID v4)
+    const tokenActivacion = crypto.randomUUID();
+    const tokenExpiraAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48 horas
+
     const resultUsuario = await pool.query(
       `
-      INSERT INTO usuarios (rol_id, nombre_completo, correo, password_hash)
-      VALUES ($1, $2, $3, $4)
-      RETURNING *
+      INSERT INTO usuarios (rol_id, nombre_completo, correo, password_hash, estado_activo, token_activacion, token_expira_at)
+      VALUES ($1, $2, $3, NULL, false, $4, $5)
+      RETURNING id, rol_id, nombre_completo, correo, estado_activo
       `,
-      [rol_id, nombre_completo, correo, password_hash]
+      [rol_id, nombre_completo, correo, tokenActivacion, tokenExpiraAt]
     );
 
     const nuevoUsuario = resultUsuario.rows[0];
@@ -104,7 +134,60 @@ app.post("/api/usuarios", async (req, res) => {
       );
     }
 
+    // Fire-and-forget: emitir evento a ms-notificaciones
+    enviarEvento('USUARIO_CREADO', {
+      email: correo,
+      nombre: nombre_completo,
+      token_activacion: tokenActivacion
+    });
+
     res.status(201).json(nuevoUsuario);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/usuarios/activar - Activar cuenta con token (sin auth)
+app.post("/api/usuarios/activar", async (req, res) => {
+  const { token, password } = req.body;
+
+  // Validar campos requeridos
+  if (!token || !password) {
+    return res.status(400).json({ error: "token y password son requeridos" });
+  }
+
+  if (password.length < 6) {
+    return res.status(400).json({ error: "La password debe tener al menos 6 caracteres" });
+  }
+
+  try {
+    // Buscar usuario por token de activacion
+    const { rows } = await pool.query(
+      `SELECT id, token_expira_at FROM usuarios WHERE token_activacion = $1`,
+      [token]
+    );
+
+    if (!rows.length) {
+      return res.status(400).json({ error: "Token invalido" });
+    }
+
+    // Validar que el token no haya expirado
+    if (new Date() > rows[0].token_expira_at) {
+      return res.status(400).json({ error: "Token expirado" });
+    }
+
+    // Hashear password y activar cuenta
+    const hash = await bcrypt.hash(password, 10);
+
+    await pool.query(
+      `UPDATE usuarios
+       SET password_hash = $1, estado_activo = true,
+           token_activacion = NULL, token_expira_at = NULL
+       WHERE id = $2`,
+      [hash, rows[0].id]
+    );
+
+    res.json({ message: "Cuenta activada" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

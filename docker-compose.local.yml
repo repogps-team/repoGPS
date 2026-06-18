@@ -46,6 +46,33 @@ services:
       - app-network
 
   # ============================================
+  # Microservicio Notificaciones (Directo sin build - usa código local)
+  # ============================================
+  ms-notificaciones:
+    image: node:18-alpine
+    container_name: ms-notificaciones
+    working_dir: /app
+    command: sh -c "npm install && node index.js"
+    environment:
+      - PORT=3003
+      - DB_USER=postgres
+      - DB_HOST=db_notificaciones
+      - DB_NAME=db_notificaciones
+      - DB_PASSWORD=password123
+      - DB_PORT=5432
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - SMTP_HOST=smtp.pacheco.cl
+      - SMTP_PORT=587
+      - SMTP_USER=noreply@pacheco.cl
+      - SMTP_FROM=noreply@pacheco.cl
+      - FRONTEND_URL=https://pacheco.cl
+    volumes:
+      - ./backend/ms-notificaciones:/app
+    networks:
+      - app-network
+
+  # ============================================
   # Frontend (Build local desde repositorio)
   # ============================================
   frontend:
@@ -78,6 +105,7 @@ services:
       - ms-usuarios
       - ms-mantenedor
       - ms-expedientes
+      - ms-notificaciones
     networks:
       - app-network
 
