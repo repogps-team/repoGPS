@@ -69,6 +69,18 @@ services:
       - app-network
 
   # ============================================
+  # MailHog (SMTP falso para desarrollo - captura emails en UI http://localhost:8025)
+  # ============================================
+  mailhog:
+    image: mailhog/mailhog
+    container_name: mailhog
+    ports:
+      - "8025:8025"   # UI web
+      - "1025:1025"   # SMTP
+    networks:
+      - app-network
+
+  # ============================================
   # Microservicio Notificaciones (Directo sin build - usa código local)
   # ============================================
   ms-notificaciones:
@@ -85,13 +97,15 @@ services:
       - DB_PORT=5432
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - SMTP_HOST=smtp.pacheco.cl
-      - SMTP_PORT=587
-      - SMTP_USER=noreply@pacheco.cl
-      - SMTP_FROM=noreply@pacheco.cl
-      - FRONTEND_URL=https://pacheco.cl
+      - SMTP_HOST=mailhog
+      - SMTP_PORT=1025
+      - SMTP_USER=
+      - SMTP_FROM=noreply@repogps.local
+      - FRONTEND_URL=http://localhost:8045
     volumes:
       - ./backend/ms-notificaciones:/app
+    depends_on:
+      - mailhog
     networks:
       - app-network
 

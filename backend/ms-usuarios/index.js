@@ -107,12 +107,42 @@ app.get("/api/roles", async (req, res) => {
 // ENDPOINTS USUARIOS
 // ============================================
 
-// POST /api/usuarios - Crear nuevo usuario (inactivo, con token de activacion)
+// POST /api/usuarios - Crear nuevo usuario
+// Compatibilidad hacia atras:
+//   - Si se envia password_hash → crea ACTIVO (comportamiento legacy)
+//   - Si NO se envia password_hash → crea INACTIVO con token de activacion (nuevo flujo)
 app.post("/api/usuarios", async (req, res) => {
-  const { rol_id, area_id, nombre_completo, correo } = req.body;
+  const { rol_id, area_id, nombre_completo, correo, password_hash } = req.body;
 
   try {
-    // Generar token de activacion (UUID v4)
+    if (password_hash) {
+      // ============================================
+      // FLUJO LEGACY: Crear usuario ACTIVO con password
+      // ============================================
+      const resultUsuario = await pool.query(
+        `
+        INSERT INTO usuarios (rol_id, nombre_completo, correo, password_hash, estado_activo)
+        VALUES ($1, $2, $3, $4, true)
+        RETURNING *
+        `,
+        [rol_id, nombre_completo, correo, password_hash]
+      );
+
+      const nuevoUsuario = resultUsuario.rows[0];
+
+      if (area_id) {
+        await pool.query(
+          `INSERT INTO usuario_area (usuario_id, area_id) VALUES ($1, $2)`,
+          [nuevoUsuario.id, area_id]
+        );
+      }
+
+      return res.status(201).json(nuevoUsuario);
+    }
+
+    // ============================================
+    // FLUJO INVITACION: Crear usuario INACTIVO con token
+    // ============================================
     const tokenActivacion = crypto.randomUUID();
     const tokenExpiraAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48 horas
 

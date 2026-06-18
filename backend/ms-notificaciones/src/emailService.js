@@ -3,17 +3,25 @@ const { buildInvitationEmail } = require("./emailTemplate");
 
 /**
  * Crea el transporter de Nodemailer basado en variables de entorno.
+ * Si SMTP_USER esta vacio, no envia autenticacion (util para MailHog en desarrollo).
  */
 function createTransporter() {
-  return nodemailer.createTransport({
+  const smtpUser = process.env.SMTP_USER || "";
+  const transportOptions = {
     host: process.env.SMTP_HOST || "smtp.pacheco.cl",
     port: parseInt(process.env.SMTP_PORT || "587"),
     secure: false, // true para 465, false para otros
-    auth: {
-      user: process.env.SMTP_USER || "noreply@pacheco.cl",
+  };
+
+  // Solo incluir auth si hay usuario configurado
+  if (smtpUser) {
+    transportOptions.auth = {
+      user: smtpUser,
       pass: process.env.SMTP_PASS || "",
-    },
-  });
+    };
+  }
+
+  return nodemailer.createTransport(transportOptions);
 }
 
 /**
