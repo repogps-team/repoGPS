@@ -494,7 +494,7 @@ const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicia
                       onChange={e => setAsignaciones(prev => ({ ...prev, revisor: e.target.value }))}
                     >
                       <option value="">Sin asignar (automático por área+rol)</option>
-                      {usuariosArea.map(u => (
+                      {usuariosArea.filter(u => u.rol_id === 2).map(u => (
                         <option key={u.id} value={u.id}>{u.nombre_completo || u.nombre || u.correo}</option>
                       ))}
                     </select>
