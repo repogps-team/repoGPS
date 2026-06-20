@@ -7,14 +7,16 @@ const BadgeTipo = ({ tipo }) => {
   const estilos = {
     revision: { bg: 'var(--info-bg, #dbeafe)', color: 'var(--info-text, #1d4ed8)' },
     aprobacion: { bg: 'var(--success-bg, #dcfce7)', color: 'var(--success-text, #166534)' },
-    visacion: { bg: 'var(--warning-bg, #fef3c7)', color: 'var(--warning-text, #92400e)' }
+    visacion: { bg: 'var(--warning-bg, #fef3c7)', color: 'var(--warning-text, #92400e)' },
+    subsanacion: { bg: '#fef3c7', color: '#92400e' }
   }
   const estilo = estilos[tipo] || { bg: 'var(--surface-hover, #f1f5f9)', color: 'var(--text-muted, #475569)' }
 
   const labels = {
     revision: 'Revision',
     aprobacion: 'Aprobacion',
-    visacion: 'Visacion'
+    visacion: 'Visacion',
+    subsanacion: 'Subsanacion'
   }
 
   return (
@@ -39,6 +41,7 @@ const BandejaTareas = () => {
   const [observacion, setObservacion] = useState('')
   const [tareaExpandida, setTareaExpandida] = useState(null)
   const [mostrarFormObs, setMostrarFormObs] = useState(null)
+  const [accionObservacion, setAccionObservacion] = useState(null) // 'rechazada' | 'subsanacion'
   const [filtroEstado, setFiltroEstado] = useState(searchParams.get('estado') || 'todas')
 
   const tareasFiltradas = filtroEstado === 'todas'
@@ -54,6 +57,7 @@ const BandejaTareas = () => {
   const handleVerDetalle = async (tarea) => {
     setTareaExpandida(tarea.id)
     setMostrarFormObs(null)
+    setAccionObservacion(null)
     setObservacion('')
     // Marcar como visto
     await marcarVisto(tarea.id)
@@ -61,17 +65,24 @@ const BandejaTareas = () => {
 
   const handleAccion = async (tareaId, estado) => {
     try {
-      if (estado === 'rechazada' && !observacion.trim()) {
-        alert('Para rechazar debes ingresar una observación')
+      if (['rechazada', 'subsanacion'].includes(estado) && !observacion.trim()) {
+        alert('Para rechazar o subsanar debes ingresar una observación')
         return
       }
       await actualizarTarea(tareaId, estado, observacion || null)
       setTareaExpandida(null)
       setObservacion('')
       setMostrarFormObs(null)
+      setAccionObservacion(null)
     } catch (err) {
       alert('Error al procesar tarea: ' + err.message)
     }
+  }
+
+  const handleAbrirObs = (tareaId, accion) => {
+    setMostrarFormObs(tareaId)
+    setAccionObservacion(accion)
+    setObservacion('')
   }
 
   if (loading) {
@@ -126,7 +137,8 @@ const BandejaTareas = () => {
         {[
           { key: 'todas', label: 'Todas' },
           { key: 'pendiente', label: 'Nuevas' },
-          { key: 'visto', label: 'Vistas' }
+          { key: 'visto', label: 'Vistas' },
+          { key: 'subsanacion', label: 'Subsanacion' }
         ].map(f => (
           <button
             key={f.key}
@@ -230,7 +242,7 @@ const BandejaTareas = () => {
                   {mostrarFormObs === tarea.id ? (
                     <div>
                       <textarea
-                        placeholder="Agregar observacion (opcional)"
+                        placeholder="Agregar observacion (requerida para rechazar/subsanar)"
                         value={observacion}
                         onChange={(e) => setObservacion(e.target.value)}
                         style={{
@@ -247,16 +259,26 @@ const BandejaTareas = () => {
                       <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                         <button 
                           className="btn btn-secondary"
-                          onClick={() => setMostrarFormObs(null)}
+                          onClick={() => { setMostrarFormObs(null); setAccionObservacion(null) }}
                         >
                           Cancelar
                         </button>
-                        <button 
-                          className="btn btn-danger"
-                          onClick={() => handleAccion(tarea.id, 'rechazada')}
-                        >
-                          Rechazar
-                        </button>
+                        {accionObservacion === 'subsanacion' ? (
+                          <button 
+                            className="btn btn-warning"
+                            onClick={() => handleAccion(tarea.id, 'subsanacion')}
+                            style={{ background: '#f59e0b', color: 'white' }}
+                          >
+                            Subsanar
+                          </button>
+                        ) : (
+                          <button 
+                            className="btn btn-danger"
+                            onClick={() => handleAccion(tarea.id, 'rechazada')}
+                          >
+                            Rechazar
+                          </button>
+                        )}
                         <button 
                           className="btn btn-primary"
                           onClick={() => handleAccion(tarea.id, 'completada')}
@@ -282,9 +304,16 @@ const BandejaTareas = () => {
                       </button>
                       <button 
                         className="btn btn-secondary"
-                        onClick={() => setMostrarFormObs(tarea.id)}
+                        onClick={() => handleAbrirObs(tarea.id, 'rechazada')}
                       >
                         Rechazar
+                      </button>
+                      <button 
+                        className="btn btn-secondary"
+                        onClick={() => handleAbrirObs(tarea.id, 'subsanacion')}
+                        style={{ background: '#f59e0b', color: 'white', borderColor: '#f59e0b' }}
+                      >
+                        Subsanar
                       </button>
                       <button 
                         className="btn btn-primary"

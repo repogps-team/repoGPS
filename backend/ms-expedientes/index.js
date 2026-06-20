@@ -1050,7 +1050,7 @@ app.get("/api/expedientes/:id", authMiddleware, async (req, res) => {
 });
 
 app.post("/api/expedientes", async (req, res) => {
-  const { proceso_id, disciplina_id, subtipo_id, titulo, descripcion, fecha_termino } = req.body;
+  const { proceso_id, disciplina_id, subtipo_id, titulo, descripcion, fecha_termino, asignaciones } = req.body;
   try {
     // Validar que disciplina y proceso pertenezcan a la misma área
     if (disciplina_id && proceso_id) {
@@ -1097,17 +1097,38 @@ app.post("/api/expedientes", async (req, res) => {
        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
       [proceso_id, disciplina_id, subtipo_id, etapa_actual_id, titulo, descripcion, fecha_termino || null]
     );
+
+    const nuevoExpediente = result.rows[0];
+
+    // Guardar asignaciones explícitas si se proporcionaron
+    if (Array.isArray(asignaciones) && asignaciones.length > 0) {
+      try {
+        for (const asignacion of asignaciones) {
+          if (asignacion.usuario_id && asignacion.rol_asignado) {
+            await pool.query(`
+              INSERT INTO expediente_asignaciones (expediente_id, usuario_id, rol_asignado, asignado_por)
+              VALUES ($1, $2, $3, $4)
+              ON CONFLICT (expediente_id, usuario_id, rol_asignado) DO NOTHING
+            `, [nuevoExpediente.id, asignacion.usuario_id, asignacion.rol_asignado, req.user?.id || null]);
+          }
+        }
+      } catch (err) {
+        // Si la tabla no existe, ignorer (migración no aplicada aún)
+        console.warn(`[expedientes] No se pudieron guardar asignaciones: ${err.message}`);
+      }
+    }
+
     documentoUploadedTotal.inc();
-    res.status(201).json(result.rows[0]);
+    res.status(201).json(nuevoExpediente);
 
     emitAudit({
       usuario_id: req.user?.id || null,
       usuario_nombre: req.user?.nombre_completo || null,
       accion: "CREATE",
       entidad: "expediente",
-      entidad_id: result.rows[0].id,
+      entidad_id: nuevoExpediente.id,
       entidad_nombre: titulo,
-      valor_nuevo: { proceso_id, disciplina_id, subtipo_id, titulo, descripcion, fecha_termino },
+      valor_nuevo: { proceso_id, disciplina_id, subtipo_id, titulo, descripcion, fecha_termino, asignaciones },
       ip: req.ip,
       user_agent: req.get("user-agent"),
     });
@@ -2157,6 +2178,70 @@ app.get("/api/historial/expediente/:expedienteId", authMiddleware, async (req, r
 });
 
 // ============================================
+// ASIGNACIÓN EXPLÍCITA DE USUARIOS
+// ============================================
+
+// GET /api/expedientes/:id/asignaciones - Obtener asignaciones de un expediente
+app.get("/api/expedientes/:id/asignaciones", authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query(
+      "SELECT * FROM expediente_asignaciones WHERE expediente_id = $1 ORDER BY fecha_asignacion DESC",
+      [id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    // Si la tabla no existe (migración no aplicada), devolver array vacío
+    if (err.message.includes('relation "expediente_asignaciones" does not exist')) {
+      return res.json([]);
+    }
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/expedientes/:id/asignaciones - Asignar usuario a expediente
+app.post("/api/expedientes/:id/asignaciones", authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  const { usuario_id, rol_asignado } = req.body;
+
+  if (!usuario_id || !rol_asignado) {
+    return res.status(400).json({ error: "usuario_id y rol_asignado son requeridos" });
+  }
+
+  if (!['responsable', 'revisor'].includes(rol_asignado)) {
+    return res.status(400).json({ error: "rol_asignado debe ser 'responsable' o 'revisor'" });
+  }
+
+  try {
+    const result = await pool.query(`
+      INSERT INTO expediente_asignaciones (expediente_id, usuario_id, rol_asignado, asignado_por)
+      VALUES ($1, $2, $3, $4)
+      ON CONFLICT (expediente_id, usuario_id, rol_asignado) DO UPDATE
+      SET rol_asignado = EXCLUDED.rol_asignado, fecha_asignacion = CURRENT_TIMESTAMP
+      RETURNING *
+    `, [id, usuario_id, rol_asignado, req.user?.id || null]);
+
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    if (err.message.includes('relation "expediente_asignaciones" does not exist')) {
+      return res.status(400).json({ error: "Migración no aplicada. Ejecute 002_flujo_expanded.sql" });
+    }
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/expedientes/:id/asignaciones/:asignacionId - Remover asignación
+app.delete("/api/expedientes/:id/asignaciones/:asignacionId", authMiddleware, async (req, res) => {
+  const { asignacionId } = req.params;
+  try {
+    await pool.query("DELETE FROM expediente_asignaciones WHERE id = $1", [asignacionId]);
+    res.json({ message: "Asignación eliminada" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================
 // TAREAS ASIGNADAS
 // ============================================
 
@@ -2185,7 +2270,7 @@ app.get("/api/tareas/mis-tareas", async (req, res) => {
       INNER JOIN procesos p ON e.proceso_id = p.id
       INNER JOIN etapas_proceso ep ON t.${etapaColumn} = ep.id
       WHERE t.usuario_id = $1
-        AND t.estado IN ('pendiente', 'visto')
+        AND t.estado IN ('pendiente', 'visto', 'subsanacion')
         AND e.estado_activo = true
         ${area_id ? 'AND p.area_id = $2' : ''}
         ${rol_id ? 'AND ep.rol_id = $3' : ''}
@@ -2323,12 +2408,12 @@ app.patch("/api/tareas/:id", async (req, res) => {
     return res.status(400).json({ error: "usuario_id es requerido" });
   }
 
-  if (!['completada', 'rechazada'].includes(estado)) {
-    return res.status(400).json({ error: "estado inválido" });
+  if (!['completada', 'rechazada', 'subsanacion'].includes(estado)) {
+    return res.status(400).json({ error: "estado inválido (use: completada, rechazada, subsanacion)" });
   }
 
-  if (estado === 'rechazada' && !String(observacion || '').trim()) {
-    return res.status(400).json({ error: "observacion es requerida para rechazar" });
+  if (['rechazada', 'subsanacion'].includes(estado) && !String(observacion || '').trim()) {
+    return res.status(400).json({ error: "observacion es requerida para rechazar/subsanar" });
   }
 
   try {
@@ -2349,7 +2434,7 @@ app.patch("/api/tareas/:id", async (req, res) => {
       return res.status(400).json({ error: "La tarea ya fue cerrada" });
     }
 
-    // NOTA: estado ya fue validado como 'completada'|'rechazada' arriba (linea ~2043)
+    // NOTA: estado ya fue validado como 'completada'|'rechazada'|'subsanacion' arriba
     // por eso fecha_termino se setea siempre a CURRENT_TIMESTAMP
     const result = await pool.query(`
       UPDATE tareas_asignadas 
@@ -2363,29 +2448,40 @@ app.patch("/api/tareas/:id", async (req, res) => {
       return res.status(404).json({ error: "Tarea no encontrada" });
     }
 
-    // HU-11/HU-12: Al completar una tarea, avanzar el expediente a la siguiente etapa
-    if (estado === 'completada' && tarea.expediente_id) {
+    // AVANCE CONDICIONAL: Solo avanzar si TODAS las tareas de la etapa están completadas
+    if ((estado === 'completada' || estado === 'subsanacion') && tarea.expediente_id) {
       try {
-        await internalAvanzarExpediente(tarea.expediente_id, usuario_id, observacion, pool, {
-          skipPermisos: true, // ya validamos que es dueño de la tarea
-          rolId: null
-        });
+        // Verificar si todas las tareas de la etapa actual están completadas
+        let etapaCol = await getTareasEtapaColumn();
+        const todasCompletadas = await pool.query(`
+          SELECT COUNT(*) FILTER (WHERE estado NOT IN ('completada')) AS pendientes
+          FROM tareas_asignadas
+          WHERE expediente_id = $1 AND ${etapaCol} = $2
+        `, [tarea.expediente_id, tarea.etapa_id]);
+
+        const pendientes = parseInt(todasCompletadas.rows[0]?.pendientes || '0');
+
+        if (pendientes === 0 && estado === 'completada') {
+          // Todas las tareas completadas → avanzar expediente
+          await internalAvanzarExpediente(tarea.expediente_id, usuario_id, observacion, pool, {
+            skipPermisos: true,
+            rolId: null
+          });
+        }
       } catch (err) {
         console.warn(`[tareas] No se pudo avanzar el expediente ${tarea.expediente_id} desde la tarea ${id}: ${err.message}`);
-        // No fallar la respuesta — la tarea ya se marcó como completada
       }
     }
 
-    // HU-12: Si se rechaza una tarea de tipo 'aprobacion', rechazar el expediente completo
+    // RECHAZO: Si se rechaza una tarea de tipo 'aprobacion', rechazar el expediente completo
     if (estado === 'rechazada' && tarea.tipo_tarea === 'aprobacion' && tarea.expediente_id) {
       try {
         await internalRechazarExpediente(tarea.expediente_id, usuario_id, observacion, pool, {
-          skipPermisos: true, // ya validamos que es dueño de la tarea
+          skipPermisos: true,
           rolId: null
         });
       } catch (err) {
         console.warn(`[tareas] No se pudo rechazar el expediente ${tarea.expediente_id} desde la tarea ${id}: ${err.message}`);
-        // No fallar la respuesta — la tarea ya se marcó como rechazada
       }
     }
 
@@ -2407,7 +2503,7 @@ app.patch("/api/tareas/:id", async (req, res) => {
 });
 
 // Generar tareas automaticamente al cambiar de etapa
-// Busca usuarios por rol+area y crea tareas_asignadas
+// Si hay asignaciones explícitas, usa esas; si no, busca por rol+area
 async function generarTareasPorEtapa(expedienteId, etapaId, pool) {
   const etapaColumn = await getTareasEtapaColumn();
   // Obtener la etapa para saber que rol requiere
@@ -2435,31 +2531,53 @@ async function generarTareasPorEtapa(expedienteId, etapaId, pool) {
 
   const { area_id } = expResult.rows[0];
 
-  // Buscar usuarios de esa area con ese rol
-  // Conectar a db_usuarios para buscar
+  // BUSCAR ASIGNACIONES EXPLÍCITAS primero
+  let usuarios = [];
   try {
-    // Buscar usuarios del area con el rol especificado via ms-usuarios
-    const response = await fetch(`${MS_USUARIOS_URL}/api/usuarios?area_id=${area_id}&rol_id=${etapa.rol_id}`);
-    if (!response.ok) return;
-    const usuarios = await response.json();
+    const asignacionesResult = await pool.query(
+      "SELECT usuario_id FROM expediente_asignaciones WHERE expediente_id = $1 AND rol_asignado = $2",
+      [expedienteId, etapa.rol_id === 3 ? 'revisor' : 'responsable']
+    );
 
-    // Crear tarea para cada usuario
-    for (const usuario of usuarios) {
-      // Verificar si ya existe una tarea similar
-      const existe = await pool.query(`
-        SELECT id FROM tareas_asignadas 
-        WHERE expediente_id = $1 AND ${etapaColumn} = $2 AND usuario_id = $3
-      `, [expedienteId, etapaId, usuario.id]);
-
-      if (existe.rows.length === 0) {
-        await pool.query(`
-          INSERT INTO tareas_asignadas (expediente_id, ${etapaColumn}, usuario_id, tipo_tarea, estado)
-          VALUES ($1, $2, $3, $4, 'pendiente')
-        `, [expedienteId, etapaId, usuario.id, etapa.tipo_tarea]);
+    if (asignacionesResult.rows.length > 0) {
+      // Usar usuarios asignados explícitamente
+      const usuarioIds = asignacionesResult.rows.map(a => a.usuario_id);
+      const response = await fetch(`${MS_USUARIOS_URL}/api/usuarios?ids=${usuarioIds.join(',')}`);
+      if (response.ok) {
+        usuarios = await response.json();
       }
     }
-  } finally {
-    // no-op (no DB connection here)
+  } catch (err) {
+    // Si la tabla no existe o hay error, continuar con búsqueda por área
+    console.warn(`[generarTareasPorEtapa] No se pudieron leer asignaciones explícitas: ${err.message}`);
+  }
+
+  // Si no hay asignaciones explícitas, buscar por área+rol (fallback)
+  if (usuarios.length === 0) {
+    try {
+      const response = await fetch(`${MS_USUARIOS_URL}/api/usuarios?area_id=${area_id}&rol_id=${etapa.rol_id}`);
+      if (response.ok) {
+        usuarios = await response.json();
+      }
+    } catch (err) {
+      console.warn(`[generarTareasPorEtapa] Error buscando usuarios por área: ${err.message}`);
+    }
+  }
+
+  // Crear tarea para cada usuario
+  for (const usuario of usuarios) {
+    // Verificar si ya existe una tarea similar
+    const existe = await pool.query(`
+      SELECT id FROM tareas_asignadas 
+      WHERE expediente_id = $1 AND ${etapaColumn} = $2 AND usuario_id = $3
+    `, [expedienteId, etapaId, usuario.id]);
+
+    if (existe.rows.length === 0) {
+      await pool.query(`
+        INSERT INTO tareas_asignadas (expediente_id, ${etapaColumn}, usuario_id, tipo_tarea, estado)
+        VALUES ($1, $2, $3, $4, 'pendiente')
+      `, [expedienteId, etapaId, usuario.id, etapa.tipo_tarea]);
+    }
   }
 }
 

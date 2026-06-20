@@ -59,6 +59,10 @@ const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicia
   const [procesosFiltrados, setProcesosFiltrados] = useState([])
   const [now] = useState(() => Date.now())
 
+  // Asignación explícita de usuarios
+  const [usuariosArea, setUsuariosArea] = useState([])
+  const [asignaciones, setAsignaciones] = useState({ responsable: '', revisor: '' })
+
   // Es admin?
   const esAdmin = user?.rol_id === 1
 
@@ -134,6 +138,23 @@ const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicia
     }
   }, [get])
 
+  // Cargar usuarios del área para asignación explícita
+  const cargarUsuariosPorArea = useCallback(async (areaId) => {
+    if (!areaId) {
+      setUsuariosArea([])
+      return
+    }
+    try {
+      const data = await get(`/api/usuarios?area_id=${areaId}`)
+      if (Array.isArray(data)) {
+        setUsuariosArea(data.filter(u => u.estado_activo !== false))
+      }
+    } catch (err) {
+      console.error('Error al cargar usuarios:', err)
+      setUsuariosArea([])
+    }
+  }, [get])
+
   // Cargar etapas cuando se selecciona un proceso
   const cargarEtapasProceso = useCallback(async (procesoId) => {
     if (!procesoId) {
@@ -169,9 +190,13 @@ const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicia
     setDisciplinasFiltradas([])
     setProcesosFiltrados([])
     setEtapasProceso([])
+    setAsignaciones({ responsable: '', revisor: '' })
     if (areaId) {
       await cargarDisciplinasPorArea(areaId)
       await cargarProcesosPorArea(areaId)
+      await cargarUsuariosPorArea(areaId)
+    } else {
+      setUsuariosArea([])
     }
   }
 
@@ -197,13 +222,24 @@ const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicia
     }
     
     try {
-      await crearExpediente(formData)
+      // Construir asignaciones para enviar al backend
+      const asignacionesPayload = []
+      if (asignaciones.responsable) {
+        asignacionesPayload.push({ usuario_id: Number(asignaciones.responsable), rol_asignado: 'responsable' })
+      }
+      if (asignaciones.revisor) {
+        asignacionesPayload.push({ usuario_id: Number(asignaciones.revisor), rol_asignado: 'revisor' })
+      }
+
+      await crearExpediente({ ...formData, asignaciones: asignacionesPayload })
       setMostrarForm(false)
       setFormData({ contratista_id: '', area_id: '', proceso_id: '', disciplina_id: '', categoria_id: '', subtipo_id: '', titulo: '', descripcion: '', fecha_termino: '' })
       setAreasFiltradas([])
       setDisciplinasFiltradas([])
       setProcesosFiltrados([])
       setEtapasProceso([])
+      setAsignaciones({ responsable: '', revisor: '' })
+      setUsuariosArea([])
       cargarExpedientes()
     } catch (err) {
       alert(err.message)
@@ -433,6 +469,37 @@ const ExpedientesPanel = ({ user, filtroEstadoInicial = 'todos', filtroSlaInicia
                   <label>Etapa Inicial (se asigna automáticamente)</label>
                   <input type="text" value={etapasProceso[0]?.nombre || ''} disabled />
                 </div>
+              )}
+
+              {/* Asignación explícita de usuarios */}
+              {formData.area_id && usuariosArea.length > 0 && (
+                <>
+                  <div className="field">
+                    <label>Responsable (opcional)</label>
+                    <select
+                      value={asignaciones.responsable}
+                      onChange={e => setAsignaciones(prev => ({ ...prev, responsable: e.target.value }))}
+                    >
+                      <option value="">Sin asignar (automático por área+rol)</option>
+                      {usuariosArea.map(u => (
+                        <option key={u.id} value={u.id}>{u.nombre_completo || u.nombre || u.correo}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="field">
+                    <label>Revisor (opcional)</label>
+                    <select
+                      value={asignaciones.revisor}
+                      onChange={e => setAsignaciones(prev => ({ ...prev, revisor: e.target.value }))}
+                    >
+                      <option value="">Sin asignar (automático por área+rol)</option>
+                      {usuariosArea.map(u => (
+                        <option key={u.id} value={u.id}>{u.nombre_completo || u.nombre || u.correo}</option>
+                      ))}
+                    </select>
+                  </div>
+                </>
               )}
 
               <div className="form-actions">

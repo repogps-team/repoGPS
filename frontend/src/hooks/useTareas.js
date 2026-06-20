@@ -43,7 +43,7 @@ export const useTareas = () => {
     }
   }, [patch, user?.id, user?.rol_id])
 
-  // Completar o rechazar tarea
+  // Completar, rechazar o subsanar tarea
   const actualizarTarea = useCallback(async (tareaId, estado, observacion = null) => {
     try {
       const data = await patch(`/api/tareas/${tareaId}`, {
@@ -53,7 +53,13 @@ export const useTareas = () => {
         rol_id: user?.rol_id
       })
       // Remover tarea completada/rechazada de la lista
-      setTareas(prev => prev.filter(t => t.id !== tareaId))
+      // subsanacion permanece visible para que el usuario la subsane
+      if (estado !== 'subsanacion') {
+        setTareas(prev => prev.filter(t => t.id !== tareaId))
+      } else {
+        // Marcar como subsanacion en la lista local
+        setTareas(prev => prev.map(t => t.id === tareaId ? { ...t, estado: 'subsanacion', observacion } : t))
+      }
       return data
     } catch (err) {
       setError(err.message)
