@@ -2448,6 +2448,65 @@ app.patch("/api/tareas/:id", async (req, res) => {
       return res.status(404).json({ error: "Tarea no encontrada" });
     }
 
+    // SUBSANACIÓN: crear tarea para colaborador (rol_id=4) del área del expediente
+    if (estado === 'subsanacion' && tarea.expediente_id) {
+      try {
+        let etapaColSubsanacion = await getTareasEtapaColumn();
+        // Obtener área del expediente
+        const expArea = await pool.query(`
+          SELECT p.area_id FROM expedientes e
+          INNER JOIN procesos p ON e.proceso_id = p.id
+          WHERE e.id = $1
+        `, [tarea.expediente_id]);
+
+        if (expArea.rows.length > 0) {
+          const areaId = expArea.rows[0].area_id;
+          // Buscar colaboradores (rol_id=4) del área
+          const colaboradoresRes = await fetch(
+            `${MS_USUARIOS_URL}/api/usuarios?area_id=${areaId}&rol_id=4`
+          );
+          if (colaboradoresRes.ok) {
+            const colaboradores = await colaboradoresRes.json();
+            for (const col of colaboradores) {
+              // No crear si ya existe una tarea pendiente de subsanación para este colaborador
+              const yaExiste = await pool.query(`
+                SELECT id FROM tareas_asignadas
+                WHERE expediente_id = $1 AND ${etapaColSubsanacion} = $2
+                  AND usuario_id = $3 AND estado = 'pendiente'
+              `, [tarea.expediente_id, tarea.etapa_id, col.id]);
+
+              if (yaExiste.rows.length === 0) {
+                await pool.query(`
+                  INSERT INTO tareas_asignadas (expediente_id, ${etapaColSubsanacion}, usuario_id, tipo_tarea, estado, observacion)
+                  VALUES ($1, $2, $3, 'subsanacion', 'pendiente', $4)
+                `, [tarea.expediente_id, tarea.etapa_id, col.id, observacion]);
+                console.log(`[subsanacion] Tarea creada para colaborador ${col.id} en expediente ${tarea.expediente_id}`);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn(`[subsanacion] No se pudo crear tarea para colaborador: ${err.message}`);
+      }
+    }
+
+    // SUBSANACIÓN COMPLETADA: si el colaborador completó, reactivar tarea del revisor
+    if (estado === 'completada' && tarea.tipo_tarea === 'subsanacion' && tarea.expediente_id) {
+      try {
+        let etapaColReactivar = await getTareasEtapaColumn();
+        // Buscar la tarea del revisor que quedó en subsanacion en la misma etapa
+        await pool.query(`
+          UPDATE tareas_asignadas
+          SET estado = 'pendiente', fecha_termino = NULL
+          WHERE expediente_id = $1 AND ${etapaColReactivar} = $2
+            AND tipo_tarea = 'revision' AND estado = 'subsanacion'
+        `, [tarea.expediente_id, tarea.etapa_id]);
+        console.log(`[subsanacion] Tarea del revisor reactivada para expediente ${tarea.expediente_id}`);
+      } catch (err) {
+        console.warn(`[subsanacion] No se pudo reactivar tarea del revisor: ${err.message}`);
+      }
+    }
+
     // AVANCE CONDICIONAL: Solo avanzar si TODAS las tareas de la etapa están completadas
     if ((estado === 'completada' || estado === 'subsanacion') && tarea.expediente_id) {
       try {
