@@ -135,6 +135,26 @@ INSERT INTO tareas_asignadas (expediente_id, etapa_id, usuario_id, tipo_tarea, e
 (3, 2, 2, 'revision', 'completada', 'Auditoria completada');
 
 -- ******************************************************
+-- OPTIMIZACIÓN FLUJO EXPEDIENTES (2026-06-20)
+-- ******************************************************
+
+-- Asignación explícita de usuarios a expedientes
+CREATE TABLE IF NOT EXISTS expediente_asignaciones (
+    id SERIAL PRIMARY KEY,
+    expediente_id INTEGER NOT NULL REFERENCES expedientes(id) ON DELETE CASCADE,
+    usuario_id INTEGER NOT NULL,
+    rol_asignado VARCHAR(50) NOT NULL, -- 'responsable', 'revisor'
+    fecha_asignacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    asignado_por INTEGER,
+    UNIQUE(expediente_id, usuario_id, rol_asignado)
+);
+
+CREATE INDEX IF NOT EXISTS idx_expediente_asignaciones_expediente
+    ON expediente_asignaciones(expediente_id);
+CREATE INDEX IF NOT EXISTS idx_expediente_asignaciones_usuario
+    ON expediente_asignaciones(usuario_id);
+
+-- ******************************************************
 -- FORMULARIOS DINAMICOS (FormIO)
 -- ******************************************************
 
