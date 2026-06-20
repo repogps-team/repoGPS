@@ -59,8 +59,10 @@ const BandejaTareas = () => {
     setMostrarFormObs(null)
     setAccionObservacion(null)
     setObservacion('')
-    // Marcar como visto
-    await marcarVisto(tarea.id)
+    // Solo marcar como visto si está pendiente (no si ya está en subsanación, rechazada o completada)
+    if (tarea.estado === 'pendiente') {
+      await marcarVisto(tarea.id)
+    }
   }
 
   const handleAccion = async (tareaId, estado) => {
