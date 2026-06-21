@@ -2530,7 +2530,6 @@ app.patch("/api/tareas/:id", async (req, res) => {
           });
           console.log(`[avance-condicional] Expediente ${tarea.expediente_id} avanzado OK`);
         }
-        }
       } catch (err) {
         console.warn(`[tareas] No se pudo avanzar el expediente ${tarea.expediente_id} desde la tarea ${id}: ${err.message}`);
       }
