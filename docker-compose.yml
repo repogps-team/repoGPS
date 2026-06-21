@@ -202,7 +202,7 @@ services:
   # Microservicio Notificaciones (NUEVO)
   # ============================================
   ms-notificaciones:
-    image: ghcr.io/repogps-team/repogps/repogps-ms-notificaciones:latest
+    image: ghcr.io/repogps-team/repogps/repogps-ms-notificaciones:${IMAGE_TAG:-latest}
     container_name: ms-notificaciones
     expose:
       - "3003"

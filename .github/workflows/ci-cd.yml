@@ -49,6 +49,7 @@ jobs:
             backend/ms-usuarios/package-lock.json
             backend/ms-mantenedor/package-lock.json
             backend/ms-expedientes/package-lock.json
+            backend/ms-notificaciones/package-lock.json
             backend/ms-auditoria/package-lock.json
       
       # Frontend
@@ -72,6 +73,11 @@ jobs:
       # Backend ms-expedientes
       - name: Instalar Backend Expedientes
         working-directory: ./backend/ms-expedientes
+        run: npm ci
+
+      # Backend ms-notificaciones
+      - name: Instalar Backend Notificaciones
+        working-directory: ./backend/ms-notificaciones
         run: npm ci
       
       # Tests ms-expedientes
@@ -192,6 +198,20 @@ jobs:
           tags: |
             ghcr.io/${{ env.REPO_LOWER }}/repogps-ms-auditoria:latest
             ghcr.io/${{ env.REPO_LOWER }}/repogps-ms-auditoria:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=min
+
+      # ============================================
+      # Build ms-notificaciones (NUEVO)
+      # ============================================
+      - name: Construir y Subir Backend Notificaciones
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend/ms-notificaciones
+          push: true
+          tags: |
+            ghcr.io/${{ env.REPO_LOWER }}/repogps-ms-notificaciones:latest
+            ghcr.io/${{ env.REPO_LOWER }}/repogps-ms-notificaciones:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=min
 
