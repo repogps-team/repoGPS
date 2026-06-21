@@ -454,7 +454,7 @@ async function validarReglasEtapaTransacted({ proceso_id, orden, tipo_etapa, tip
 async function getTareaConEtapa(tareaId) {
   let etapaColumn = await getTareasEtapaColumn();
   const buildQuery = () => `
-    SELECT t.id, t.usuario_id, t.estado, t.expediente_id, ep.rol_id, ep.tipo_tarea
+    SELECT t.id, t.usuario_id, t.estado, t.expediente_id, t.${etapaColumn} AS etapa_id, ep.rol_id, ep.tipo_tarea
     FROM tareas_asignadas t
     INNER JOIN etapas_proceso ep ON t.${etapaColumn} = ep.id
     WHERE t.id = $1
