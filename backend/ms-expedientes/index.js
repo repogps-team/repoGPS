@@ -2590,13 +2590,15 @@ async function generarTareasPorEtapa(expedienteId, etapaId, pool) {
 
   const { area_id } = expResult.rows[0];
 
-  // BUSCAR ASIGNACIONES EXPLÍCITAS primero
-  let usuarios = [];
-  try {
-    const asignacionesResult = await pool.query(
-      "SELECT usuario_id FROM expediente_asignaciones WHERE expediente_id = $1 AND rol_asignado = $2",
-      [expedienteId, etapa.rol_id === 3 ? 'revisor' : 'responsable']
-    );
+    // BUSCAR ASIGNACIONES EXPLÍCITAS primero
+    let usuarios = [];
+    try {
+      // Mapear rol_id de la etapa al label de asignación
+      const rolAsignadoLabel = etapa.rol_id === 2 ? 'revisor' : etapa.rol_id === 3 ? 'aprobador' : 'responsable';
+      const asignacionesResult = await pool.query(
+        "SELECT usuario_id FROM expediente_asignaciones WHERE expediente_id = $1 AND rol_asignado = $2",
+        [expedienteId, rolAsignadoLabel]
+      );
 
     if (asignacionesResult.rows.length > 0) {
       // Usar usuarios asignados explícitamente
