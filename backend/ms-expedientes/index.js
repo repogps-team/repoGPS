@@ -2519,13 +2519,17 @@ app.patch("/api/tareas/:id", async (req, res) => {
         `, [tarea.expediente_id, tarea.etapa_id]);
 
         const pendientes = parseInt(todasCompletadas.rows[0]?.pendientes || '0');
+        console.log(`[avance-condicional] expediente=${tarea.expediente_id} etapa=${tarea.etapa_id} pendientes=${pendientes} estado_tarea=${estado}`);
 
         if (pendientes === 0 && estado === 'completada') {
+          console.log(`[avance-condicional] Avanzando expediente ${tarea.expediente_id}...`);
           // Todas las tareas completadas → avanzar expediente
           await internalAvanzarExpediente(tarea.expediente_id, usuario_id, observacion, pool, {
             skipPermisos: true,
             rolId: null
           });
+          console.log(`[avance-condicional] Expediente ${tarea.expediente_id} avanzado OK`);
+        }
         }
       } catch (err) {
         console.warn(`[tareas] No se pudo avanzar el expediente ${tarea.expediente_id} desde la tarea ${id}: ${err.message}`);
@@ -2564,6 +2568,7 @@ app.patch("/api/tareas/:id", async (req, res) => {
 // Generar tareas automaticamente al cambiar de etapa
 // Si hay asignaciones explícitas, usa esas; si no, busca por rol+area
 async function generarTareasPorEtapa(expedienteId, etapaId, pool) {
+  console.log(`[generarTareasPorEtapa] INICIO expediente=${expedienteId} etapa=${etapaId}`);
   const etapaColumn = await getTareasEtapaColumn();
   // Obtener la etapa para saber que rol requiere
   const etapaResult = await pool.query(
@@ -2576,7 +2581,10 @@ async function generarTareasPorEtapa(expedienteId, etapaId, pool) {
   const etapa = etapaResult.rows[0];
 
   // Si la etapa no tiene tipo_tarea ni rol_id, no generar tareas
-  if (!etapa.tipo_tarea || !etapa.rol_id) return;
+  if (!etapa.tipo_tarea || !etapa.rol_id) {
+    console.log(`[generarTareasPorEtapa] SKIP etapa ${etapaId} sin tipo_tarea ni rol_id`);
+    return;
+  }
 
   // Obtener info del expediente para saber el area
   const expResult = await pool.query(`
@@ -2616,9 +2624,13 @@ async function generarTareasPorEtapa(expedienteId, etapaId, pool) {
   // Si no hay asignaciones explícitas, buscar por área+rol (fallback)
   if (usuarios.length === 0) {
     try {
+      console.log(`[generarTareasPorEtapa] Buscando usuarios por area_id=${area_id} rol_id=${etapa.rol_id}`);
       const response = await fetch(`${MS_USUARIOS_URL}/api/usuarios?area_id=${area_id}&rol_id=${etapa.rol_id}`);
       if (response.ok) {
         usuarios = await response.json();
+        console.log(`[generarTareasPorEtapa] Encontrados ${usuarios.length} usuarios por área+rol`);
+      } else {
+        console.warn(`[generarTareasPorEtapa] ms-usuarios respondió ${response.status}`);
       }
     } catch (err) {
       console.warn(`[generarTareasPorEtapa] Error buscando usuarios por área: ${err.message}`);
@@ -2626,6 +2638,7 @@ async function generarTareasPorEtapa(expedienteId, etapaId, pool) {
   }
 
   // Crear tarea para cada usuario
+  console.log(`[generarTareasPorEtapa] Creando tareas para ${usuarios.length} usuarios...`);
   for (const usuario of usuarios) {
     // Verificar si ya existe una tarea similar
     const existe = await pool.query(`
@@ -2638,8 +2651,12 @@ async function generarTareasPorEtapa(expedienteId, etapaId, pool) {
         INSERT INTO tareas_asignadas (expediente_id, ${etapaColumn}, usuario_id, tipo_tarea, estado)
         VALUES ($1, $2, $3, $4, 'pendiente')
       `, [expedienteId, etapaId, usuario.id, etapa.tipo_tarea]);
+      console.log(`[generarTareasPorEtapa] Tarea creada para usuario ${usuario.id} (${usuario.nombre_completo}) tipo=${etapa.tipo_tarea}`);
+    } else {
+      console.log(`[generarTareasPorEtapa] Tarea ya existe para usuario ${usuario.id}, etapa ${etapaId}`);
     }
   }
+  console.log(`[generarTareasPorEtapa] FIN expediente=${expedienteId}`);
 }
 
 // ============================================
