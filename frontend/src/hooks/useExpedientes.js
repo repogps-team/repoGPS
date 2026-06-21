@@ -32,7 +32,8 @@ export const useExpedientes = () => {
       subtipo_id: expediente.subtipo_id ? Number(expediente.subtipo_id) : null,
       titulo: expediente.titulo,
       descripcion: expediente.descripcion,
-      fecha_termino: expediente.fecha_termino || null
+      fecha_termino: expediente.fecha_termino || null,
+      asignaciones: expediente.asignaciones || []
     })
     return data
   }, [post])
