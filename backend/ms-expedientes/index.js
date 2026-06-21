@@ -454,7 +454,8 @@ async function validarReglasEtapaTransacted({ proceso_id, orden, tipo_etapa, tip
 async function getTareaConEtapa(tareaId) {
   let etapaColumn = await getTareasEtapaColumn();
   const buildQuery = () => `
-    SELECT t.id, t.usuario_id, t.estado, t.expediente_id, t.${etapaColumn} AS etapa_id, ep.rol_id, ep.tipo_tarea
+    SELECT t.id, t.usuario_id, t.estado, t.expediente_id, t.${etapaColumn} AS etapa_id,
+           t.tipo_tarea AS tarea_tipo_tarea, ep.rol_id, ep.tipo_tarea AS etapa_tipo_tarea
     FROM tareas_asignadas t
     INNER JOIN etapas_proceso ep ON t.${etapaColumn} = ep.id
     WHERE t.id = $1
@@ -2482,7 +2483,7 @@ app.patch("/api/tareas/:id", async (req, res) => {
     }
 
     // SUBSANACIÓN COMPLETADA: si el colaborador completó, reactivar tarea del revisor
-    if (estado === 'completada' && tarea.tipo_tarea === 'subsanacion' && tarea.expediente_id) {
+    if (estado === 'completada' && tarea.tarea_tipo_tarea === 'subsanacion' && tarea.expediente_id) {
       try {
         let etapaColReactivar = await getTareasEtapaColumn();
         // Buscar la tarea del revisor que quedó en subsanacion en la misma etapa
@@ -2527,7 +2528,7 @@ app.patch("/api/tareas/:id", async (req, res) => {
     }
 
     // RECHAZO: Si se rechaza una tarea de tipo 'aprobacion', rechazar el expediente completo
-    if (estado === 'rechazada' && tarea.tipo_tarea === 'aprobacion' && tarea.expediente_id) {
+    if (estado === 'rechazada' && tarea.tarea_tipo_tarea === 'aprobacion' && tarea.expediente_id) {
       try {
         await internalRechazarExpediente(tarea.expediente_id, usuario_id, observacion, pool, {
           skipPermisos: true,
