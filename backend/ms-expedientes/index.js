@@ -2273,11 +2273,10 @@ app.get("/api/tareas/mis-tareas", async (req, res) => {
         AND t.estado IN ('pendiente', 'visto', 'subsanacion')
         AND e.estado_activo = true
         ${area_id ? 'AND p.area_id = $2' : ''}
-        ${rol_id ? 'AND ep.rol_id = $3' : ''}
       ORDER BY t.id, t.fecha_asignacion ASC
     `;
 
-    const params = area_id && rol_id ? [usuario_id, area_id, rol_id] : [usuario_id];
+    const params = area_id ? [usuario_id, area_id] : [usuario_id];
 
     let result;
     try {
