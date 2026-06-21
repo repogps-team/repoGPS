@@ -2377,10 +2377,6 @@ app.patch("/api/tareas/:id/visto", async (req, res) => {
       return res.status(403).json({ error: "No autorizado para esta tarea" });
     }
 
-    if (rol_id && tarea.rol_id && Number(rol_id) !== Number(tarea.rol_id)) {
-      return res.status(403).json({ error: "Rol no autorizado para esta tarea" });
-    }
-
     if (['completada', 'rechazada'].includes(tarea.estado)) {
       return res.status(400).json({ error: "La tarea ya fue cerrada" });
     }
@@ -2423,10 +2419,6 @@ app.patch("/api/tareas/:id", async (req, res) => {
 
     if (Number(tarea.usuario_id) !== Number(usuario_id)) {
       return res.status(403).json({ error: "No autorizado para esta tarea" });
-    }
-
-    if (rol_id && tarea.rol_id && Number(rol_id) !== Number(tarea.rol_id)) {
-      return res.status(403).json({ error: "Rol no autorizado para esta tarea" });
     }
 
     if (['completada', 'rechazada'].includes(tarea.estado)) {
