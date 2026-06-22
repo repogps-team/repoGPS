@@ -321,8 +321,8 @@ const BandejaTareas = () => {
                         Cerrar
                       </button>
                       
-                      {/* Colaborador (rol_id=4) solo ve "Completar" en tareas de subsanación */}
-                      {user?.rol_id === 4 && tarea.tipo_tarea === 'subsanacion' ? (
+                      {/* Colaborador (rol_id=4) solo ve "Completar" */}
+                      {user?.rol_id === 4 ? (
                         <button 
                           className="btn btn-primary"
                           onClick={() => handleAccion(tarea.id, 'completada')}

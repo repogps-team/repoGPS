@@ -2265,7 +2265,7 @@ app.get("/api/tareas/mis-tareas", async (req, res) => {
         p.nombre AS proceso_nombre,
         p.area_id,
         ep.nombre AS etapa_nombre,
-        ep.tipo_tarea
+        ep.tipo_tarea AS etapa_tipo_tarea
       FROM tareas_asignadas t
       INNER JOIN expedientes e ON t.expediente_id = e.id
       INNER JOIN procesos p ON e.proceso_id = p.id
