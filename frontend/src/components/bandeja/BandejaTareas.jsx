@@ -241,6 +241,22 @@ const BandejaTareas = () => {
                   borderTop: '1px solid var(--border-color)',
                   background: 'var(--bg-app)'
                 }}>
+                  {/* Mostrar observación de la tarea si existe */}
+                  {tarea.observacion && (
+                    <div style={{
+                      background: '#fef3c7',
+                      border: '1px solid #f59e0b',
+                      borderRadius: '6px',
+                      padding: '12px',
+                      marginBottom: '16px'
+                    }}>
+                      <strong style={{ color: '#92400e', fontSize: '12px', textTransform: 'uppercase' }}>
+                        Observación:
+                      </strong>
+                      <p style={{ margin: '4px 0 0', color: '#92400e' }}>{tarea.observacion}</p>
+                    </div>
+                  )}
+
                   {mostrarFormObs === tarea.id ? (
                     <div>
                       <textarea
@@ -304,26 +320,40 @@ const BandejaTareas = () => {
                       >
                         Cerrar
                       </button>
-                      <button 
-                        className="btn btn-secondary"
-                        onClick={() => handleAbrirObs(tarea.id, 'rechazada')}
-                      >
-                        Rechazar
-                      </button>
-                      <button 
-                        className="btn btn-secondary"
-                        onClick={() => handleAbrirObs(tarea.id, 'subsanacion')}
-                        style={{ background: '#f59e0b', color: 'white', borderColor: '#f59e0b' }}
-                      >
-                        Subsanar
-                      </button>
-                      <button 
-                        className="btn btn-primary"
-                        onClick={() => handleAccion(tarea.id, 'completada')}
-                        style={{ background: '#22c55e' }}
-                      >
-                        Aprobar
-                      </button>
+                      
+                      {/* Colaborador (rol_id=4) solo ve "Completar" en tareas de subsanación */}
+                      {user?.rol_id === 4 && tarea.tipo_tarea === 'subsanacion' ? (
+                        <button 
+                          className="btn btn-primary"
+                          onClick={() => handleAccion(tarea.id, 'completada')}
+                          style={{ background: '#22c55e' }}
+                        >
+                          Completar
+                        </button>
+                      ) : (
+                        <>
+                          <button 
+                            className="btn btn-secondary"
+                            onClick={() => handleAbrirObs(tarea.id, 'rechazada')}
+                          >
+                            Rechazar
+                          </button>
+                          <button 
+                            className="btn btn-secondary"
+                            onClick={() => handleAbrirObs(tarea.id, 'subsanacion')}
+                            style={{ background: '#f59e0b', color: 'white', borderColor: '#f59e0b' }}
+                          >
+                            Subsanar
+                          </button>
+                          <button 
+                            className="btn btn-primary"
+                            onClick={() => handleAccion(tarea.id, 'completada')}
+                            style={{ background: '#22c55e' }}
+                          >
+                            Aprobar
+                          </button>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
