@@ -8,7 +8,7 @@ import {
   getPaginationRowModel,
   flexRender,
 } from '@tanstack/react-table'
-import { useBulkUpload } from '../../hooks/useBulkUpload'
+import { useBulkUpload } from '../hooks/useBulkUpload'
 
 // =====================================================
 // Columnas de la tabla
