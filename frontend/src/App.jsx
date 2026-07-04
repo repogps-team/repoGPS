@@ -23,6 +23,7 @@ import FormResponses from './components/forms/FormResponses'
 import Reportes from './pages/Reportes'
 import FormResponderPage from './pages/FormResponderPage'
 import AdminTransiciones from './pages/AdminTransiciones'
+import BulkUploadPage from './pages/BulkUploadPage'
 import SyncIndicator from './components/layout/SyncIndicator'
 import BottomBar from './components/layout/BottomBar'
 import { warmupCache } from './lib/cacheWarmup'
@@ -43,11 +44,12 @@ const titulos = {
   expedientes: 'Expedientes',
   formularios: 'Formularios',
   reportes: 'Reportes',
-  transiciones: 'Transiciones por Rol'
+  transiciones: 'Transiciones por Rol',
+  'carga-masiva': 'Carga Masiva'
 }
 
 // Menús por rol
-const menuAdmin = ['dashboard', 'usuarios', 'contratistas', 'areas', 'disciplinas', 'categorias', 'procesos', 'etapas', 'expedientes', 'formularios', 'reportes', 'transiciones']
+const menuAdmin = ['dashboard', 'usuarios', 'contratistas', 'areas', 'disciplinas', 'categorias', 'procesos', 'etapas', 'expedientes', 'carga-masiva', 'formularios', 'reportes', 'transiciones']
 const menuNoAdmin = ['dashboard', 'bandeja', 'expedientes']
 
 // Mapeo de rutas a secciones
@@ -63,7 +65,8 @@ const rutaASeccion = {
   '/expedientes': 'expedientes',
   '/bandeja': 'bandeja',
   '/formularios': 'formularios',
-  '/reportes': 'reportes'
+  '/reportes': 'reportes',
+  '/carga-masiva': 'carga-masiva'
 }
 
 // Wrapper para Expedientes que lee filtros + abrir expediente de la URL
@@ -184,6 +187,7 @@ const SidebarLayout = () => {
           <Route path="formularios/:id/respuestas" element={<FormResponses />} />
           <Route path="reportes" element={<Reportes />} />
           <Route path="transiciones" element={<AdminTransiciones />} />
+          <Route path="carga-masiva" element={<BulkUploadPage />} />
         </Routes>
       </Content>
 

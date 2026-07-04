@@ -2687,6 +2687,9 @@ app.use(formRoutes(pool, authMiddleware, MS_USUARIOS_URL));
 const transicionesRoutes = require('./src/routes/transiciones');
 app.use(transicionesRoutes(pool, authMiddleware));
 
+const stagingRoutes = require('./src/routes/staging');
+app.use(stagingRoutes(pool, authMiddleware));
+
 // Servidor
 const PORT = process.env.PORT || 3002;
 
