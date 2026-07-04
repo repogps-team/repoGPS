@@ -9,6 +9,7 @@ import {
   flexRender,
 } from '@tanstack/react-table'
 import { useBulkUpload } from '../hooks/useBulkUpload'
+import { useApi } from '../hooks/useApi'
 
 // =====================================================
 // Columnas de la tabla
@@ -112,20 +113,29 @@ const BulkUploadPage = () => {
     clearError,
   } = useBulkUpload()
 
+  const { get } = useApi()
+
   const [pendingFiles, setPendingFiles] = useState([])
   const [search, setSearch] = useState('')
   const [sorting, setSorting] = useState([])
   const [rowSelection, setRowSelection] = useState({})
   const [expedienteId, setExpedienteId] = useState('')
+  const [expedientes, setExpedientes] = useState([])
+  const [expSearch, setExpSearch] = useState('')
+  const [showExpDropdown, setShowExpDropdown] = useState(false)
   const [showAssignModal, setShowAssignModal] = useState(false)
   const [assigning, setAssigning] = useState(false)
   const [uploadResult, setUploadResult] = useState(null)
 
-  // Cargar documentos existentes al montar
+  // Cargar documentos y expedientes al montar
   useEffect(() => {
     fetchDocumentos()
     fetchStats()
-  }, [fetchDocumentos, fetchStats])
+    // Cargar expedientes para el selector
+    get('/api/expedientes').then(data => {
+      if (Array.isArray(data)) setExpedientes(data)
+    }).catch(() => {})
+  }, [fetchDocumentos, fetchStats, get])
 
   // Dropzone para archivos pendientes
   const onDrop = useCallback((acceptedFiles) => {
@@ -192,7 +202,7 @@ const BulkUploadPage = () => {
   // Asignar a expediente
   const handleAssign = async () => {
     if (!expedienteId) {
-      alert('Ingresa un ID de expediente')
+      alert('Selecciona un expediente')
       return
     }
     setAssigning(true)
@@ -204,6 +214,7 @@ const BulkUploadPage = () => {
       setRowSelection({})
       setShowAssignModal(false)
       setExpedienteId('')
+      setExpSearch('')
       await fetchDocumentos()
       await fetchStats()
     } catch (err) {
@@ -212,6 +223,22 @@ const BulkUploadPage = () => {
       setAssigning(false)
     }
   }
+
+  // Expedientes filtrados por búsqueda
+  const filteredExpedientes = useMemo(() => {
+    if (!expSearch) return expedientes
+    const q = expSearch.toLowerCase()
+    return expedientes.filter(e =>
+      e.titulo?.toLowerCase().includes(q) ||
+      e.descripcion?.toLowerCase().includes(q) ||
+      String(e.id).includes(q)
+    )
+  }, [expedientes, expSearch])
+
+  // Expediente seleccionado
+  const selectedExpediente = useMemo(() => {
+    return expedientes.find(e => e.id === parseInt(expedienteId))
+  }, [expedientes, expedienteId])
 
   // Columnas de la tabla
   const columns = useMemo(() => createColumns(handleDelete), [handleDelete])
@@ -449,19 +476,61 @@ const BulkUploadPage = () => {
               Se asignarán <strong>{selectedCount} documentos</strong> al expediente.
             </p>
             <div className="bulk-modal-field">
-              <label>ID del Expediente</label>
-              <input
-                type="number"
-                value={expedienteId}
-                onChange={(e) => setExpedienteId(e.target.value)}
-                placeholder="Ej: 1"
-                disabled={assigning}
-              />
+              <label>Expediente</label>
+              <div className="bulk-exp-selector">
+                <input
+                  type="text"
+                  value={selectedExpediente ? `${selectedExpediente.titulo || selectedExpediente.descripcion || 'Expediente #' + selectedExpediente.id}` : expSearch}
+                  onChange={(e) => {
+                    setExpSearch(e.target.value)
+                    setExpedienteId('')
+                    setShowExpDropdown(true)
+                  }}
+                  onFocus={() => setShowExpDropdown(true)}
+                  placeholder="Buscar por nombre o ID..."
+                  disabled={assigning}
+                  className="bulk-exp-input"
+                />
+                {showExpDropdown && expSearch && !expedienteId && (
+                  <div className="bulk-exp-dropdown">
+                    {filteredExpedientes.length === 0 ? (
+                      <div className="bulk-exp-option empty">No se encontraron expedientes</div>
+                    ) : (
+                      filteredExpedientes.slice(0, 20).map(exp => (
+                        <div
+                          key={exp.id}
+                          className="bulk-exp-option"
+                          onClick={() => {
+                            setExpedienteId(String(exp.id))
+                            setExpSearch('')
+                            setShowExpDropdown(false)
+                          }}
+                        >
+                          <span className="bulk-exp-option-title">
+                            {exp.titulo || exp.descripcion || `Expediente #${exp.id}`}
+                          </span>
+                          <span className="bulk-exp-option-id">ID: {exp.id}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+              {selectedExpediente && (
+                <div className="bulk-exp-selected">
+                  <span>{selectedExpediente.titulo || selectedExpediente.descripcion || `Expediente #${selectedExpediente.id}`}</span>
+                  <button
+                    className="bulk-btn-icon"
+                    onClick={() => { setExpedienteId(''); setExpSearch('') }}
+                    disabled={assigning}
+                  >×</button>
+                </div>
+              )}
             </div>
             <div className="bulk-modal-actions">
               <button
                 className="bulk-btn-secondary"
-                onClick={() => setShowAssignModal(false)}
+                onClick={() => { setShowAssignModal(false); setExpSearch(''); setExpedienteId('') }}
                 disabled={assigning}
               >
                 Cancelar
@@ -567,6 +636,17 @@ const BulkUploadPage = () => {
         .bulk-modal-field label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 500; color: var(--text-main, #333); }
         .bulk-modal-field input { width: 100%; padding: 8px 12px; border: 1px solid var(--border-color, #d1d5db); border-radius: 6px; font-size: 14px; background: var(--bg-panel, #fff); color: var(--text-main, #333); }
         .bulk-modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+        /* Expediente selector */
+        .bulk-exp-selector { position: relative; }
+        .bulk-exp-input { width: 100%; padding: 8px 12px; border: 1px solid var(--border-color, #d1d5db); border-radius: 6px; font-size: 14px; background: var(--bg-panel, #fff); color: var(--text-main, #333); box-sizing: border-box; }
+        .bulk-exp-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-panel, #fff); border: 1px solid var(--border-color, #d1d5db); border-radius: 6px; max-height: 200px; overflow-y: auto; z-index: 10; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-top: 4px; }
+        .bulk-exp-option { padding: 8px 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 13px; border-bottom: 1px solid var(--border-color, #f3f4f6); }
+        .bulk-exp-option:hover { background: var(--surface-hover, #f3f4f6); }
+        .bulk-exp-option.empty { color: var(--text-muted, #999); cursor: default; justify-content: center; }
+        .bulk-exp-option-title { color: var(--text-main, #333); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+        .bulk-exp-option-id { color: var(--text-muted, #999); font-size: 12px; margin-left: 8px; flex-shrink: 0; }
+        .bulk-exp-selected { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; padding: 6px 10px; background: rgba(37, 99, 235, 0.08); border-radius: 6px; font-size: 13px; color: var(--text-main, #333); }
       `}</style>
     </div>
   )

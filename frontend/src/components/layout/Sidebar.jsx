@@ -66,6 +66,11 @@ const icons = {
     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
       <path d="M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/>
     </svg>
+  ),
+  'carga-masiva': (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+    </svg>
   )
 }
 
@@ -94,7 +99,7 @@ const Sidebar = ({ onLogout, menuItems = [], titulos = {}, usuario = {}, sidebar
   const categoriasAdmin = {
     'Gestión': ['dashboard', 'usuarios', 'contratistas', 'areas', 'disciplinas'],
     'Motor de Procesos': ['procesos', 'etapas'],
-    'Expedientes': ['expedientes', 'categorias', 'formularios', 'reportes'],
+    'Expedientes': ['expedientes', 'categorias', 'carga-masiva', 'formularios', 'reportes'],
     'Configuración': ['transiciones']
   }
 
