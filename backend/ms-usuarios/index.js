@@ -120,13 +120,18 @@ app.post("/api/usuarios", async (req, res) => {
       // ============================================
       // FLUJO LEGACY: Crear usuario ACTIVO con password
       // ============================================
+      // Hashear con bcrypt si viene en texto plano
+      const hashedPassword = password_hash.startsWith('$2')
+        ? password_hash
+        : await bcrypt.hash(password_hash, 10);
+
       const resultUsuario = await pool.query(
         `
         INSERT INTO usuarios (rol_id, nombre_completo, correo, password_hash, estado_activo)
         VALUES ($1, $2, $3, $4, true)
         RETURNING *
         `,
-        [rol_id, nombre_completo, correo, password_hash]
+        [rol_id, nombre_completo, correo, hashedPassword]
       );
 
       const nuevoUsuario = resultUsuario.rows[0];
